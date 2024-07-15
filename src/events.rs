@@ -33,7 +33,6 @@ impl EventHandler {
 
         client.connect(None).await;
 
-        // client subscrive to hotshot events
         client
             .socket("hotshot-events/events")
             .subscribe::<BuilderEvent<TYPES>>()
