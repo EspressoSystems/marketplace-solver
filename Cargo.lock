@@ -4875,7 +4875,9 @@ dependencies = [
  "snafu",
  "surf-disco",
  "tide-disco",
+ "toml",
  "tracing",
+ "vbs",
 ]
 
 [[package]]
