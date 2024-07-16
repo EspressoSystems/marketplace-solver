@@ -23,6 +23,8 @@ impl EventHandler {
 
             tracing::info!("received event {:?}", event.event);
 
+            // TODO ED: Remove this lint later
+            #[allow(clippy::single_match)]
             match event.event {
                 BuilderEventType::StartupInfo {
                     known_node_with_stake,
