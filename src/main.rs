@@ -2,15 +2,12 @@ use async_std::sync::RwLock;
 use futures::FutureExt;
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
-use std::io;
-use std::io::ErrorKind;
+use std::{io, io::ErrorKind};
 use tide_disco::{
     api::ApiError,
-    error::ServerError,
     method::{ReadState, WriteState},
-    Api, App, StatusCode, Url,
+    Api, App, StatusCode,
 };
-use tracing::info;
 use vbs::version::{StaticVersion, StaticVersionType};
 
 type StaticVer01 = StaticVersion<0, 1>;
@@ -36,8 +33,8 @@ impl tide_disco::Error for SolverError {
     }
 }
 
+// TODO ED: Implement a shared solver state with the HotShot events received
 #[derive(Default, Clone)]
-// State: 'static + Send + Sync + ReadState + WriteState,
 struct SolverState {}
 
 fn define_api<SolverState, SolverError, VERSION>(
@@ -55,6 +52,8 @@ where
     .expect("API file is not valid toml");
 
     let mut api = Api::new(api_toml)?;
+
+    // TODO ED: We need to fill these in with the appropriate logic later
     api.post("submit_bid", |req, state| {
         async move { Ok("Bid Submitted") }.boxed()
     })?
@@ -78,10 +77,7 @@ where
 
 #[async_std::main]
 pub async fn main() {
-    println!("Hello world");
-
-    // TODO ED Create state object instead of Hello.tostring
-    let mut app = App::<_, SolverError>::with_state(RwLock::new("Hello".to_string()));
+    let mut app = App::<_, SolverError>::with_state(RwLock::new(SolverState::default()));
     app.with_version(env!("CARGO_PKG_VERSION").parse().unwrap());
 
     let mut api = define_api()
