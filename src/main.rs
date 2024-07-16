@@ -54,22 +54,22 @@ where
     let mut api = Api::new(api_toml)?;
 
     // TODO ED: We need to fill these in with the appropriate logic later
-    api.post("submit_bid", |req, state| {
+    api.post("submit_bid", |_req, _state| {
         async move { Ok("Bid Submitted") }.boxed()
     })?
-    .get("auction_results", |req, state| {
+    .get("auction_results", |_req, _state| {
         async move { Ok("Auction Results Gotten") }.boxed()
     })?
-    .get("auction_results_permissioned", |req, state| {
+    .get("auction_results_permissioned", |_req, _state| {
         async move { Ok("Permissioned Auction Results Gotten") }.boxed()
     })?
-    .post("register_rollup", |req, state| {
+    .post("register_rollup", |_req, _state| {
         async move { Ok("Rollup Registered") }.boxed()
     })?
-    .post("update_rollup", |req, state| {
+    .post("update_rollup", |_req, _state| {
         async move { Ok("Rollup Updated") }.boxed()
     })?
-    .get("rollup_registrations", |req, state| {
+    .get("rollup_registrations", |_req, _state| {
         async move { Ok("Rollup Registrations Gotten") }.boxed()
     })?;
     Ok(api)
@@ -87,6 +87,6 @@ pub async fn main() {
 
     app.register_module::<SolverError, SolverVersion>("hello", api)
         .unwrap();
-    app.serve(format!("0.0.0.0:{}", 7777), StaticVer01::instance())
+    let _ = app.serve(format!("0.0.0.0:{}", 7777), StaticVer01::instance())
         .await;
 }
