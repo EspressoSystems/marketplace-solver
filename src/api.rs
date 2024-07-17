@@ -33,23 +33,15 @@ impl tide_disco::Error for SolverError {
     }
 }
 
+#[derive(Default)]
 pub struct ApiOptions {
     pub api_path: Option<PathBuf>,
 
-    /// Additional API specification files to merge with `availability-api-path`.
+    /// Additional API specification files to merge with `solver-api-path`.
     ///
     /// These optional files may contain route definitions for application-specific routes that have
-    /// been added as extensions to the basic availability API.
+    /// been added as extensions to the basic solver API.
     pub extensions: Vec<toml::Value>,
-}
-
-impl Default for ApiOptions {
-    fn default() -> Self {
-        Self {
-            api_path: None,
-            extensions: vec![],
-        }
-    }
 }
 
 pub fn define_api<State, VERSION>(
