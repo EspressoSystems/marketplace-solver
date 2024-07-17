@@ -15,7 +15,7 @@ pub trait UpdateSolverState {
     fn get_all_rollup_registrations(&self);
 }
 
-pub trait SolverStateDataSource {
+pub trait SolverDataSource {
     fn get_auction_results_permissionless(view_number: ViewNumber);
     fn get_auction_results_permissioned(
         view_number: ViewNumber,
@@ -33,7 +33,7 @@ impl UpdateSolverState for Arc<RwLock<SolverState>> {
     fn get_all_rollup_registrations(&self) {}
 }
 
-impl SolverStateDataSource for SolverState {
+impl SolverDataSource for SolverState {
     fn get_auction_results_permissionless(_view_number: ViewNumber) {}
 
     fn get_auction_results_permissioned(

@@ -8,7 +8,7 @@ use tide_disco::{
 };
 use vbs::version::StaticVersionType;
 
-use crate::{SolverStateDataSource, UpdateSolverState};
+use crate::{SolverDataSource, UpdateSolverState};
 
 #[derive(Clone, Debug, Deserialize, Serialize, Snafu)]
 pub enum SolverError {
@@ -32,7 +32,7 @@ pub fn define_api<State, SolverError, VERSION>(
 where
     VERSION: StaticVersionType + 'static,
     State: 'static + Send + Sync + ReadState + WriteState + UpdateSolverState,
-    <State as ReadState>::State: Send + Sync + SolverStateDataSource,
+    <State as ReadState>::State: Send + Sync + SolverDataSource,
     SolverError: 'static,
 {
     let api_toml = toml::from_str::<toml::Value>(include_str!("../api/solver.toml"))
