@@ -1,6 +1,4 @@
-use std::sync::Arc;
-
-use async_std::{stream::StreamExt, sync::RwLock};
+use async_std::stream::StreamExt;
 use hotshot::types::Event;
 use hotshot_events_service::events;
 use hotshot_types::traits::node_implementation::NodeType;
@@ -10,15 +8,12 @@ use surf_disco::{
 };
 use tide_disco::Url;
 
-use crate::state::SolverState;
+use crate::state::GlobalState;
 
 pub struct EventHandler;
 
 impl EventHandler {
-    pub async fn run<TYPES: NodeType>(
-        url: Url,
-        _state: Arc<RwLock<SolverState>>,
-    ) -> anyhow::Result<()> {
+    pub async fn run<TYPES: NodeType>(url: Url, _state: GlobalState) -> anyhow::Result<()> {
         let mut events = Self::connect_service::<TYPES>(url).await?;
 
         while let Some(event) = events.next().await {

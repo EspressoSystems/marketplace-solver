@@ -8,21 +8,21 @@ use tide_disco::{
 };
 use vbs::version::StaticVersionType;
 
-use crate::state::{SolverDataSource, UpdateSolverState};
+use crate::state::UpdateSolverState;
 
 #[derive(Clone, Debug, Deserialize, Serialize, Snafu)]
 pub enum SolverError {
-    DefaultError { status: StatusCode, message: String },
+    Custom { status: StatusCode, message: String },
 }
 
 impl tide_disco::Error for SolverError {
     fn catch_all(status: StatusCode, message: String) -> Self {
-        Self::DefaultError { status, message }
+        Self::Custom { status, message }
     }
 
     fn status(&self) -> StatusCode {
         match self {
-            Self::DefaultError { status, .. } => *status,
+            Self::Custom { status, .. } => *status,
         }
     }
 }
@@ -31,8 +31,8 @@ pub fn define_api<State, SolverError, VERSION>(
 ) -> Result<Api<State, SolverError, VERSION>, ApiError>
 where
     VERSION: StaticVersionType + 'static,
-    State: 'static + Send + Sync + ReadState + WriteState + UpdateSolverState,
-    <State as ReadState>::State: Send + Sync + SolverDataSource,
+    State: 'static + Send + Sync + ReadState + WriteState,
+    <State as ReadState>::State: Send + Sync + UpdateSolverState,
     SolverError: 'static,
 {
     let api_toml = toml::from_str::<toml::Value>(include_str!("../api/solver.toml"))

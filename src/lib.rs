@@ -1,4 +1,5 @@
 mod api;
+pub mod database;
 mod events;
 mod options;
 pub mod state;
