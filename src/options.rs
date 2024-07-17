@@ -8,10 +8,13 @@ use tide_disco::Url;
 pub struct Options {
     #[clap(long, env = "HOTSHOT_EVENTS_API_URL")]
     pub events_url: Url,
+
+    #[clap(flatten)]
+    pub database_options: DatabaseOptions,
 }
 
 /// Arguments for establishing a database connection
-#[derive(Debug, Parser)]
+#[derive(Clone, Debug, Parser)]
 pub struct DatabaseOptions {
     #[clap(long, env = "MARKETPLACE_SOLVER_DATABASE_URL")]
     pub url: String,

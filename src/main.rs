@@ -17,7 +17,7 @@ pub async fn main() {
     let mut app = App::<_, SolverError>::with_state(RwLock::new(GlobalState::mock()));
     app.with_version(env!("CARGO_PKG_VERSION").parse().unwrap());
 
-    let mut api = define_api()
+    let mut api = define_api(Default::default())
         .map_err(|_e| io::Error::new(ErrorKind::Other, "Failed to define api"))
         .unwrap();
     api.with_version(env!("CARGO_PKG_VERSION").parse().unwrap());
