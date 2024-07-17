@@ -16,10 +16,26 @@ pub struct Options {
 /// Arguments for establishing a database connection
 #[derive(Clone, Debug, Parser)]
 pub struct DatabaseOptions {
-    #[clap(long, env = "MARKETPLACE_SOLVER_DATABASE_URL")]
-    pub url: String,
+    // Postgres URL connection string
+    #[clap(long, env = "MARKETPLACE_SOLVER_POSTGRES_URL")]
+    pub url: Option<String>,
 
-    #[clap(long, env = "MARKETPLACE_SOLVER_DATABASE_MAX_CONNECTIONS")]
+    #[clap(long, env = "MARKETPLACE_SOLVER_POSTGRES_HOST")]
+    pub host: Option<String>,
+
+    #[clap(long, env = "MARKETPLACE_SOLVER_POSTGRES_PORT")]
+    pub port: Option<u16>,
+
+    #[clap(long, env = "MARKETPLACE_SOLVER_POSTGRES_DATABASE_NAME")]
+    pub db_name: Option<String>,
+
+    #[clap(long, env = "MARKETPLACE_SOLVER_POSTGRES_USERNAME")]
+    pub username: Option<String>,
+
+    #[clap(long, env = "MARKETPLACE_SOLVER_POSTGRES_PASSWORD")]
+    pub password: Option<String>,
+
+    #[clap(long, env = "MARKETPLACE_SOLVER_POSTGRES_MAX_CONNECTIONS")]
     pub max_connections: Option<u32>,
 
     #[clap(long,value_parser = parse_duration, env = "MARKETPLACE_SOLVER_DATABASE_ACQUIRE_TIMEOUT")]

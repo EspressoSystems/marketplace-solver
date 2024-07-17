@@ -1,3 +1,4 @@
 CREATE TABLE test (
-    id     SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
+    str text NOT NULL
 );

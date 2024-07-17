@@ -6118,6 +6118,7 @@ dependencies = [
  "futures",
  "hotshot",
  "hotshot-events-service",
+ "hotshot-query-service",
  "hotshot-types",
  "serde",
  "snafu 0.8.4",
