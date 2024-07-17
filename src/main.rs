@@ -1,9 +1,10 @@
-use async_std::sync::RwLock;
-use marketplace_solver::{define_api, state::SolverState, SolverError};
 use std::{
     io::{self, ErrorKind},
     sync::Arc,
 };
+
+use async_std::sync::RwLock;
+use marketplace_solver::{define_api, state::SolverState, SolverError};
 use tide_disco::App;
 use vbs::version::{StaticVersion, StaticVersionType};
 

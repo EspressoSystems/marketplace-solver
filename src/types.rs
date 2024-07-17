@@ -1,6 +1,4 @@
-use espresso_types::FeeAmount;
-use espresso_types::NamespaceId;
-use espresso_types::SeqTypes;
+use espresso_types::{FeeAmount, NamespaceId, SeqTypes};
 use hotshot_types::traits::node_implementation::NodeType;
 
 pub struct RollupRegistration {

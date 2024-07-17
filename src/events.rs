@@ -4,7 +4,6 @@ use async_std::{stream::StreamExt, sync::RwLock};
 use hotshot::types::Event;
 use hotshot_events_service::events;
 use hotshot_types::traits::node_implementation::NodeType;
-
 use surf_disco::{
     socket::{Connection, Unsupported},
     Client,
