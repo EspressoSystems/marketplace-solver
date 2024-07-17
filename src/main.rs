@@ -1,7 +1,8 @@
 use std::io::{self, ErrorKind};
 
 use async_std::sync::RwLock;
-use marketplace_solver::{define_api, state::GlobalState, SolverError};
+use clap::Parser;
+use marketplace_solver::{define_api, state::GlobalState, DatabaseOptions, SolverError};
 use tide_disco::App;
 use vbs::version::{StaticVersion, StaticVersionType};
 
@@ -14,7 +15,10 @@ pub const SOLVER_VERSION: SolverVersion = StaticVersion {};
 // >>>> main() will be removed when we move binary to sequencer
 #[async_std::main]
 pub async fn main() {
-    let mut app = App::<_, SolverError>::with_state(RwLock::new(GlobalState::mock()));
+    let database_options = DatabaseOptions::parse();
+    let state = GlobalState::new(database_options).await.unwrap();
+
+    let mut app = App::<_, SolverError>::with_state(RwLock::new(state));
     app.with_version(env!("CARGO_PKG_VERSION").parse().unwrap());
 
     let mut api = define_api(Default::default())

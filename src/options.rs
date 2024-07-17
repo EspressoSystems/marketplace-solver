@@ -4,6 +4,8 @@ use clap::Parser;
 use snafu::Snafu;
 use tide_disco::Url;
 
+use crate::database::PostgresClient;
+
 #[derive(Parser, Clone, Debug)]
 pub struct Options {
     #[clap(long, env = "HOTSHOT_EVENTS_API_URL")]
@@ -43,6 +45,12 @@ pub struct DatabaseOptions {
 
     #[clap(long,value_parser = parse_duration, env = "MARKETPLACE_SOLVER_DATABASE_RUN_MIGRATIONS",  default_value_t = true)]
     pub migrations: bool,
+}
+
+impl DatabaseOptions {
+    pub async fn connect(self) -> anyhow::Result<PostgresClient> {
+        PostgresClient::connect(self).await
+    }
 }
 
 #[derive(Clone, Debug, Snafu)]

@@ -1,21 +1,28 @@
 use std::sync::Arc;
 
+use anyhow::Context;
 use async_std::sync::RwLock;
 use async_trait::async_trait;
 use espresso_types::{NamespaceId, SeqTypes};
 use hotshot_types::{data::ViewNumber, traits::node_implementation::NodeType};
 
+use crate::{database::PostgresClient, DatabaseOptions};
+
 // TODO ED: Implement a shared solver state with the HotShot events received
 pub struct GlobalState {
     pub solver: Arc<RwLock<SolverState>>,
-    // persistence: PostgresClient,
+    pub persistence: PostgresClient,
 }
 
 impl GlobalState {
-    pub fn mock() -> Self {
-        Self {
+    pub async fn new(opts: DatabaseOptions) -> anyhow::Result<Self> {
+        Ok(Self {
             solver: Arc::new(RwLock::new(SolverState)),
-        }
+            persistence: opts
+                .connect()
+                .await
+                .context("failed to connect to database")?,
+        })
     }
 }
 
@@ -54,5 +61,35 @@ impl UpdateSolverState for GlobalState {
         _view_number: ViewNumber,
         _signauture: <SeqTypes as NodeType>::SignatureKey,
     ) {
+    }
+}
+
+#[cfg(test)]
+impl GlobalState {
+    pub async fn mock() -> Self {
+        let db = hotshot_query_service::data_source::sql::testing::TmpDb::init().await;
+        let host = db.host();
+        let port = db.port();
+
+        let opts = DatabaseOptions {
+            url: None,
+            host: Some(host),
+            port: Some(port),
+            db_name: None,
+            username: Some("postgres".to_string()),
+            password: Some("password".to_string()),
+            max_connections: Some(100),
+            acquire_timeout: None,
+            migrations: true,
+        };
+
+        let client = PostgresClient::connect(opts)
+            .await
+            .expect("failed to connect to database");
+
+        Self {
+            solver: Arc::new(RwLock::new(SolverState)),
+            persistence: client,
+        }
     }
 }
