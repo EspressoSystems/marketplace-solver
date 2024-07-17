@@ -11,7 +11,7 @@ use surf_disco::{
 };
 use tide_disco::Url;
 
-use crate::SolverState;
+use crate::state::SolverState;
 
 pub struct EventHandler;
 

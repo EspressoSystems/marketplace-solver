@@ -8,7 +8,7 @@ use tide_disco::{
 };
 use vbs::version::StaticVersionType;
 
-use crate::{SolverDataSource, UpdateSolverState};
+use crate::state::{SolverDataSource, UpdateSolverState};
 
 #[derive(Clone, Debug, Deserialize, Serialize, Snafu)]
 pub enum SolverError {

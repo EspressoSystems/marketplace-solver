@@ -1,5 +1,5 @@
 use async_std::sync::RwLock;
-use marketplace_solver::{define_api, SolverError, SolverState};
+use marketplace_solver::{define_api, state::SolverState, SolverError};
 use std::{
     io::{self, ErrorKind},
     sync::Arc,

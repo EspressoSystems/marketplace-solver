@@ -9,6 +9,7 @@ use hotshot_types::{data::ViewNumber, traits::node_implementation::NodeType};
 pub struct SolverState {}
 
 pub trait UpdateSolverState {
+    // TODO (abdul) : add BidTx from types crate once https://github.com/EspressoSystems/espresso-sequencer/pull/1696 is merged
     fn submit_bix_tx(&self);
     fn register_rollup(&self);
     fn update_rollup_registration(&self, namespace_id: NamespaceId);
@@ -16,7 +17,9 @@ pub trait UpdateSolverState {
 }
 
 pub trait SolverDataSource {
+    // TODO (abdul): return AuctionResults
     fn get_auction_results_permissionless(view_number: ViewNumber);
+    // TODO (abdul): return AuctionResults
     fn get_auction_results_permissioned(
         view_number: ViewNumber,
         signauture: <SeqTypes as NodeType>::SignatureKey,
