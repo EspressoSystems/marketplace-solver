@@ -1,7 +1,7 @@
 use anyhow::Context;
 use sqlx::{
     pool::PoolConnection,
-    postgres::{PgConnectOptions, PgPoolOptions},
+    postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
     ConnectOptions, Error, PgPool, Postgres,
 };
 use tide_disco::Url;
@@ -31,7 +31,10 @@ impl PostgresClient {
             None => {
                 let host = host.context("host not provided")?;
                 let port = port.context("port not provided")?;
-                let mut connect_opts = PgConnectOptions::new().host(&host).port(port);
+                let mut connect_opts = PgConnectOptions::new()
+                    .host(&host)
+                    .port(port)
+                    .ssl_mode(PgSslMode::Allow);
 
                 if let Some(username) = username {
                     connect_opts = connect_opts.username(&username);
@@ -60,7 +63,7 @@ impl PostgresClient {
         let connection = options.connect(postgres_url.as_str()).await?;
 
         if migrations {
-            sqlx::migrate!("./migration").run(&connection).await?;
+            sqlx::migrate!("./migrations").run(&connection).await?;
         }
 
         Ok(Self(connection))
@@ -111,7 +114,7 @@ mod test {
             .await
             .unwrap();
 
-        let result: i64 = sqlx::query_scalar("Select id from test where str = 'testing';")
+        let result: i32 = sqlx::query_scalar("Select id from test where str = 'testing';")
             .fetch_one(pool)
             .await
             .unwrap();
