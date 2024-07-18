@@ -1,15 +1,16 @@
-use std::io::{self, ErrorKind};
+use std::{
+    io::{self, ErrorKind},
+    sync::Arc,
+};
 
+use async_compatibility_layer::art::async_spawn;
 use async_std::sync::RwLock;
 use clap::Parser;
-use espresso_types::SeqTypes;
-use hotshot_events_service::events_source::StartupInfo;
 use marketplace_solver::{
-    define_api,
+    define_api, handle_events,
     state::{GlobalState, SolverState, StakeTable},
-    Options, SolverError,
+    EventsServiceClient, Options, SolverError,
 };
-use surf_disco::Client;
 use tide_disco::App;
 use vbs::version::{StaticVersion, StaticVersionType};
 
@@ -26,16 +27,11 @@ pub async fn main() {
     let options = Options::parse();
     let database_options = options.database_options;
 
-    let events_api = options.events_url;
+    let events_api_url = options.events_url;
 
-    let client = Client::<hotshot_events_service::events::Error, StaticVer01>::new(events_api);
-    client.connect(None).await;
-
-    let startup_info: StartupInfo<SeqTypes> = client
-        .get("startup_info")
-        .send()
-        .await
-        .expect("failed to get startup_info");
+    let event_stream_connector = EventsServiceClient::new(events_api_url).await;
+    let startup_info = event_stream_connector.get_startup_event().await.unwrap();
+    let stream = event_stream_connector.get_event_stream().await.unwrap();
 
     let solver_state = SolverState {
         stake_table: StakeTable {
@@ -43,11 +39,15 @@ pub async fn main() {
         },
     };
 
-    let state = GlobalState::new(database_options, solver_state)
-        .await
-        .unwrap();
+    let state = Arc::new(RwLock::new(
+        GlobalState::new(database_options, solver_state)
+            .await
+            .unwrap(),
+    ));
 
-    let mut app = App::<_, SolverError>::with_state(RwLock::new(state));
+    let _handle = async_spawn(handle_events(stream, state.clone()));
+
+    let mut app = App::<_, SolverError>::with_state(state);
     app.with_version(env!("CARGO_PKG_VERSION").parse().unwrap());
 
     let mut api = define_api(Default::default())
