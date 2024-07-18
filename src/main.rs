@@ -29,9 +29,9 @@ pub async fn main() {
 
     let events_api_url = options.events_url;
 
-    let event_stream_connector = EventsServiceClient::new(events_api_url).await;
-    let startup_info = event_stream_connector.get_startup_event().await.unwrap();
-    let stream = event_stream_connector.get_event_stream().await.unwrap();
+    let client = EventsServiceClient::new(events_api_url).await;
+    let startup_info = client.get_startup_info().await.unwrap();
+    let stream = client.get_event_stream().await.unwrap();
 
     let solver_state = SolverState {
         stake_table: StakeTable {

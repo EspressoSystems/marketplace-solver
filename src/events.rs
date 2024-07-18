@@ -23,7 +23,7 @@ impl EventsServiceClient {
         Self(client)
     }
 
-    pub async fn get_startup_event(
+    pub async fn get_startup_info(
         &self,
     ) -> Result<StartupInfo<SeqTypes>, hotshot_events_service::events::Error> {
         self.0.get("hotshot-events/startup_info").send().await
