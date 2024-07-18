@@ -87,13 +87,14 @@ impl PostgresClient {
 
 #[cfg(all(test, not(target_os = "windows")))]
 pub mod test {
+    use async_compatibility_layer::logging::setup_logging;
     use hotshot_query_service::data_source::sql::testing::TmpDb;
 
     use super::PostgresClient;
     use crate::DatabaseOptions;
 
-    pub async fn setup_mock_database() -> PostgresClient {
-        let db = TmpDb::init().await;
+    pub async fn setup_mock_database() -> (TmpDb, PostgresClient) {
+        let db: TmpDb = TmpDb::init().await;
         let host = db.host();
         let port = db.port();
 
@@ -110,14 +111,21 @@ pub mod test {
             migrations: true,
         };
 
-        PostgresClient::connect(opts)
-            .await
-            .expect("failed to connect to database")
+        // TmpDb will be dropped, which will cause the Docker container to be killed.
+        // Therefore, it is returned and kept in scope until needed.
+        (
+            db,
+            PostgresClient::connect(opts)
+                .await
+                .expect("failed to connect to database"),
+        )
     }
 
     #[async_std::test]
     async fn test_database_connection() {
-        let client = setup_mock_database().await;
+        setup_logging();
+
+        let (tmpdb, client) = setup_mock_database().await;
         let pool = client.pool();
 
         sqlx::query("INSERT INTO test (str) VALUES ('testing');")
@@ -131,5 +139,7 @@ pub mod test {
             .unwrap();
 
         assert_eq!(result, 1);
+
+        drop(tmpdb);
     }
 }

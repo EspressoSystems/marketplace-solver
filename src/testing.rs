@@ -5,6 +5,7 @@ use std::sync::Arc;
 use async_compatibility_layer::art::async_spawn;
 use async_std::{sync::RwLock, task::JoinHandle};
 use espresso_types::SeqTypes;
+use hotshot_query_service::data_source::sql::testing::TmpDb;
 use hotshot_types::traits::node_implementation::NodeType;
 use portpicker::pick_unused_port;
 use surf_disco::Client;
@@ -25,6 +26,7 @@ pub struct MockSolver {
     state: Arc<RwLock<GlobalState>>,
     database: PostgresClient,
     handles: Vec<JoinHandle<()>>,
+    tmp_db: TmpDb,
 }
 
 impl MockSolver {
@@ -49,7 +51,7 @@ impl Drop for MockSolver {
 
 impl MockSolver {
     async fn init() -> Self {
-        let database = setup_mock_database().await;
+        let (tmp_db, database) = setup_mock_database().await;
         let (url, event_api_handle, generate_events_handle) = run_mock_event_service();
 
         let client = EventsServiceClient::new(url.clone()).await;
@@ -111,6 +113,7 @@ impl MockSolver {
             solver_api,
             state,
             database,
+            tmp_db,
             handles,
         }
     }
