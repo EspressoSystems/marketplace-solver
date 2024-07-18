@@ -13,15 +13,22 @@ async-compatibility-layer = { version = "1.1", default-features = false, feature
 async-std = { version = "1.9.0", features = ["unstable", "attributes"] }
 async-trait = "0.1"
 clap = { version = "4.4", features = ["derive", "env"] }
+cld = "0.5"
+espresso-types = { git = "https://github.com/EspressoSystems/espresso-sequencer.git", branch = "main", features = [ "testing" ] }
 futures = "0.3"
 hotshot = { git = "https://github.com/EspressoSystems/HotShot.git", tag = "rc-0.5.61" }
-hotshot-events-service = { git = "https://github.com/EspressoSystems/hotshot-events-service.git", tag = "rc-0.1.32" }
+hotshot-events-service = { git = "https://github.com/EspressoSystems/hotshot-events-service.git", branch = "main" }
 hotshot-types = { git = "https://github.com/EspressoSystems/HotShot.git", tag = "rc-0.5.61" }
 serde = { version = "1.0", features = ["derive"] }
 snafu = "0.8"
+sqlx = { version = "0.7.4", features = [ "postgres", "macros" ] }
 surf-disco = "0.9"
 tide-disco = "0.9"
 toml = "0.8.14"
 tracing = "0.1"
 vbs = "0.1"
 
+[dev-dependencies]
+hotshot-query-service = { git = "https://github.com/EspressoSystems/hotshot-query-service", tag = "rc-0.1.44" }
+portpicker = "0.1"
+rand = "0.3.0"
