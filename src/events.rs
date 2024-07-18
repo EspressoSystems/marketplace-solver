@@ -1,54 +1,69 @@
-use async_std::stream::StreamExt;
+use std::{pin::Pin, sync::Arc};
+
+use anyhow::Context;
+use async_std::sync::RwLock;
+use espresso_types::SeqTypes;
+use futures::{Stream, StreamExt as _};
 use hotshot::types::Event;
-use hotshot_events_service::events;
+use hotshot_events_service::{events, events_source::StartupInfo};
 use hotshot_types::traits::node_implementation::NodeType;
-use surf_disco::{
-    socket::{Connection, Unsupported},
-    Client,
-};
+use surf_disco::Client;
 use tide_disco::Url;
 
 use crate::state::GlobalState;
 
-pub struct EventHandler;
+pub struct EventsServiceClient(Client<events::Error, <SeqTypes as NodeType>::Base>);
 
-impl EventHandler {
-    pub async fn run<TYPES: NodeType>(url: Url, _state: GlobalState) -> anyhow::Result<()> {
-        let mut events = Self::connect_service::<TYPES>(url).await?;
-
-        while let Some(event) = events.next().await {
-            let event = event?;
-
-            tracing::info!("received event {:?}", event.event);
-
-            // TODO ED: Remove this lint later
-            #[allow(clippy::single_match)]
-            match event.event {
-                hotshot::types::EventType::ViewFinished { view_number } => {
-                    tracing::info!("received view finished event {view_number:?}")
-                }
-                _ => (),
-            }
-        }
-
-        Ok(())
-    }
-
-    pub async fn connect_service<TYPES: NodeType>(
-        url: Url,
-    ) -> Result<
-        Connection<Event<TYPES>, Unsupported, events::Error, <TYPES as NodeType>::Base>,
-        events::Error,
-    > {
-        let client = Client::<events::Error, TYPES::Base>::new(url.clone());
+impl EventsServiceClient {
+    pub async fn new(url: Url) -> Self {
+        let client = Client::<events::Error, <SeqTypes as NodeType>::Base>::new(url.clone());
 
         client.connect(None).await;
 
-        client
-            .socket("hotshot-events/events")
-            .subscribe::<Event<TYPES>>()
-            .await
+        Self(client)
     }
+
+    pub async fn get_startup_event(
+        &self,
+    ) -> Result<StartupInfo<SeqTypes>, hotshot_events_service::events::Error> {
+        self.0.get("hotshot-events/startup_info").send().await
+    }
+
+    pub async fn get_event_stream(
+        self,
+    ) -> anyhow::Result<Pin<Box<dyn Stream<Item = Result<Event<SeqTypes>, events::Error>> + Send>>>
+    {
+        let stream = self
+            .0
+            .socket("hotshot-events/events")
+            .subscribe::<Event<SeqTypes>>()
+            .await
+            .context("failed to get event stream")?;
+
+        Ok(stream.boxed())
+    }
+}
+
+pub async fn handle_events(
+    mut stream: Pin<Box<dyn Stream<Item = Result<Event<SeqTypes>, events::Error>> + Send>>,
+    _state: Arc<RwLock<GlobalState>>,
+) -> anyhow::Result<()> {
+    while let Some(event) = stream.next().await {
+        let event = event?;
+
+        tracing::info!("received event {:?}", event.event);
+
+        // TODO ED: Remove this lint later
+        #[allow(clippy::single_match)]
+        match event.event {
+            hotshot::types::EventType::ViewFinished { view_number } => {
+                tracing::info!("received view finished event {view_number:?}")
+            }
+            _ => (),
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(any(test, feature = "testing"))]
@@ -85,7 +100,6 @@ pub mod mock {
 
     pub fn generate_stake_table() -> Vec<PeerConfig<BLSPubKey>> {
         (0..STAKED_NODES)
-            .into_iter()
             .map(|_| {
                 let private_key =
                     <BLSPubKey as SignatureKey>::PrivateKey::generate(&mut rand::thread_rng());
