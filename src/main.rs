@@ -20,7 +20,7 @@ pub type SolverVersion = StaticVersion<SOLVER_MAJOR_VERSION, SOLVER_MINOR_VERSIO
 pub const SOLVER_VERSION: SolverVersion = StaticVersion {};
 
 // >>>> main() will be removed when we move binary to sequencer
-//  this demonstrate the intended flow
+//  this demonstrates the intended flow
 #[async_std::main]
 pub async fn main() {
     let options = Options::parse();

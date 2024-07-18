@@ -86,6 +86,7 @@ impl GlobalState {
             password: Some("password".to_string()),
             max_connections: Some(100),
             acquire_timeout: None,
+            require_ssl: false,
             migrations: true,
         };
 

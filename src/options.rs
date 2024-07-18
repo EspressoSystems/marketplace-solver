@@ -43,6 +43,9 @@ pub struct DatabaseOptions {
     #[clap(long,value_parser = parse_duration, env = "MARKETPLACE_SOLVER_DATABASE_ACQUIRE_TIMEOUT")]
     pub acquire_timeout: Option<Duration>,
 
+    #[clap(long,value_parser = parse_duration, env = "MARKETPLACE_SOLVER_DATABASE_REQUIRE_SSL", default_value_t = false)]
+    pub require_ssl: bool,
+
     #[clap(long,value_parser = parse_duration, env = "MARKETPLACE_SOLVER_DATABASE_RUN_MIGRATIONS",  default_value_t = true)]
     pub migrations: bool,
 }

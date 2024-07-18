@@ -21,6 +21,7 @@ impl PostgresClient {
             password,
             max_connections,
             acquire_timeout,
+            require_ssl,
             migrations,
         } = opts;
 
@@ -46,6 +47,10 @@ impl PostgresClient {
 
                 if let Some(db_name) = db_name {
                     connect_opts = connect_opts.database(&db_name);
+                }
+
+                if require_ssl {
+                    connect_opts = connect_opts.ssl_mode(PgSslMode::Require)
                 }
 
                 connect_opts.to_url_lossy()
@@ -100,6 +105,7 @@ mod test {
             password: Some("password".to_string()),
             max_connections: Some(100),
             acquire_timeout: None,
+            require_ssl: false,
             migrations: true,
         };
 
