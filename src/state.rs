@@ -1,6 +1,5 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
-use async_std::sync::RwLock;
 use async_trait::async_trait;
 use espresso_types::{NamespaceId, PubKey, SeqTypes};
 use hotshot_types::{
@@ -11,14 +10,14 @@ use crate::database::PostgresClient;
 
 // TODO ED: Implement a shared solver state with the HotShot events received
 pub struct GlobalState {
-    pub solver: Arc<RwLock<SolverState>>,
+    pub solver: SolverState,
     pub persistence: PostgresClient,
 }
 
 impl GlobalState {
     pub async fn new(db: PostgresClient, state: SolverState) -> anyhow::Result<Self> {
         Ok(Self {
-            solver: Arc::new(RwLock::new(state)),
+            solver: state,
             persistence: db,
         })
     }
@@ -95,7 +94,7 @@ impl GlobalState {
             .expect("failed to connect to database");
 
         Self {
-            solver: Arc::new(RwLock::new(SolverState::mock())),
+            solver: SolverState::mock(),
             persistence: client,
         }
     }

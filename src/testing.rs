@@ -74,7 +74,7 @@ impl MockSolver {
         let event_handler_handle = async_spawn({
             let state = state.clone();
             async move {
-                let _ = handle_events(stream, state.clone()).await;
+                let _ = handle_events(stream, state).await;
             }
         });
 

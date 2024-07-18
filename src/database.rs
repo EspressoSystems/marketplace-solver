@@ -8,7 +8,7 @@ use tide_disco::Url;
 
 use crate::DatabaseOptions;
 
-// PgPool is wrapped in an Arc internally so cloning here clones the reference of PgPool
+// PgPool is wrapped in an Arc internally so cloning here increments the reference count
 #[derive(Clone)]
 pub struct PostgresClient(PgPool);
 
