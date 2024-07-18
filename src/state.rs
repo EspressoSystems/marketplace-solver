@@ -3,8 +3,8 @@ use std::sync::Arc;
 use anyhow::Context;
 use async_std::sync::RwLock;
 use async_trait::async_trait;
-use espresso_types::{NamespaceId, SeqTypes};
-use hotshot_types::{data::ViewNumber, traits::node_implementation::NodeType};
+use espresso_types::{NamespaceId, PubKey, SeqTypes};
+use hotshot_types::{data::ViewNumber, traits::node_implementation::NodeType, PeerConfig};
 
 use crate::{database::PostgresClient, DatabaseOptions};
 
@@ -15,9 +15,9 @@ pub struct GlobalState {
 }
 
 impl GlobalState {
-    pub async fn new(opts: DatabaseOptions) -> anyhow::Result<Self> {
+    pub async fn new(opts: DatabaseOptions, state: SolverState) -> anyhow::Result<Self> {
         Ok(Self {
-            solver: Arc::new(RwLock::new(SolverState)),
+            solver: Arc::new(RwLock::new(state)),
             persistence: opts
                 .connect()
                 .await
@@ -26,7 +26,13 @@ impl GlobalState {
     }
 }
 
-pub struct SolverState;
+pub struct SolverState {
+    pub stake_table: StakeTable,
+}
+
+pub struct StakeTable {
+    pub known_nodes_with_stake: Vec<PeerConfig<PubKey>>,
+}
 
 #[async_trait]
 pub trait UpdateSolverState {
@@ -88,8 +94,19 @@ impl GlobalState {
             .expect("failed to connect to database");
 
         Self {
-            solver: Arc::new(RwLock::new(SolverState)),
+            solver: Arc::new(RwLock::new(SolverState::mock())),
             persistence: client,
+        }
+    }
+}
+
+#[cfg(test)]
+impl SolverState {
+    pub fn mock() -> Self {
+        Self {
+            stake_table: StakeTable {
+                known_nodes_with_stake: crate::mock::generate_stake_table(),
+            },
         }
     }
 }
