@@ -8,6 +8,8 @@ use tide_disco::Url;
 
 use crate::DatabaseOptions;
 
+// PgPool is wrapped in an Arc internally so cloning here clones the reference of PgPool
+#[derive(Clone)]
 pub struct PostgresClient(PgPool);
 
 impl PostgresClient {
@@ -84,14 +86,13 @@ impl PostgresClient {
 }
 
 #[cfg(all(test, not(target_os = "windows")))]
-mod test {
+pub mod test {
     use hotshot_query_service::data_source::sql::testing::TmpDb;
 
     use super::PostgresClient;
     use crate::DatabaseOptions;
 
-    #[async_std::test]
-    async fn test_database_connection() {
+    pub async fn setup_mock_database() -> PostgresClient {
         let db = TmpDb::init().await;
         let host = db.host();
         let port = db.port();
@@ -109,10 +110,14 @@ mod test {
             migrations: true,
         };
 
-        let client = PostgresClient::connect(opts)
+        PostgresClient::connect(opts)
             .await
-            .expect("failed to connect to database");
+            .expect("failed to connect to database")
+    }
 
+    #[async_std::test]
+    async fn test_database_connection() {
+        let client = setup_mock_database().await;
         let pool = client.pool();
 
         sqlx::query("INSERT INTO test (str) VALUES ('testing');")
