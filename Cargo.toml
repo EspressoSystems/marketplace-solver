@@ -5,9 +5,6 @@ authors = ["Espresso Systems <hello@espressosys.com>"]
 edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dev-dependencies]
-hotshot-query-service = { git = "https://github.com/EspressoSystems/hotshot-query-service", tag = "rc-0.1.44" }
-
 [dependencies]
 anyhow = "1"
 async-compatibility-layer = { version = "1.1", default-features = false, features = [
@@ -30,3 +27,8 @@ tide-disco = "0.9"
 toml = "0.8.14"
 tracing = "0.1"
 vbs = "0.1"
+
+[dev-dependencies]
+hotshot-query-service = { git = "https://github.com/EspressoSystems/hotshot-query-service", tag = "rc-0.1.44" }
+portpicker = "0.1"
+rand = "0.3.0"
