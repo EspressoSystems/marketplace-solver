@@ -36,4 +36,4 @@ vbs = "0.1"
 [dev-dependencies]
 hotshot-query-service = { git = "https://github.com/EspressoSystems/hotshot-query-service", tag = "rc-0.1.44" }
 portpicker = "0.1"
-rand = "0.3.0"
+rand = "0.8.5"
