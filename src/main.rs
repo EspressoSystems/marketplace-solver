@@ -1,7 +1,4 @@
-use std::{
-    io::{self, ErrorKind},
-    sync::Arc,
-};
+use std::sync::Arc;
 
 use async_compatibility_layer::art::async_spawn;
 use async_std::sync::RwLock;
@@ -37,12 +34,15 @@ pub async fn main() {
         stake_table: StakeTable {
             known_nodes_with_stake: startup_info.known_node_with_stake,
         },
+        bid_txs: Default::default(),
     };
 
+    let db = database_options
+        .connect()
+        .await
+        .expect("failed to create database");
     let state = Arc::new(RwLock::new(
-        GlobalState::new(database_options, solver_state)
-            .await
-            .unwrap(),
+        GlobalState::new(db, solver_state).await.unwrap(),
     ));
 
     let _handle = async_spawn(handle_events(stream, state.clone()));
@@ -50,14 +50,12 @@ pub async fn main() {
     let mut app = App::<_, SolverError>::with_state(state);
     app.with_version(env!("CARGO_PKG_VERSION").parse().unwrap());
 
-    let mut api = define_api(Default::default())
-        .map_err(|_e| io::Error::new(ErrorKind::Other, "Failed to define api"))
-        .unwrap();
+    let mut api = define_api(Default::default()).unwrap();
     api.with_version(env!("CARGO_PKG_VERSION").parse().unwrap());
 
     app.register_module::<SolverError, SolverVersion>("hello", api)
         .unwrap();
     let _ = app
-        .serve(format!("0.0.0.0:{}", 7777), StaticVer01::instance())
+        .serve(format!("http://0.0.0.0:{}", 7777), StaticVer01::instance())
         .await;
 }

@@ -8,6 +8,8 @@ use tide_disco::Url;
 
 use crate::DatabaseOptions;
 
+// PgPool is wrapped in an Arc internally so cloning here increments the reference count
+#[derive(Clone)]
 pub struct PostgresClient(PgPool);
 
 impl PostgresClient {
@@ -84,15 +86,15 @@ impl PostgresClient {
 }
 
 #[cfg(all(test, not(target_os = "windows")))]
-mod test {
+pub mod test {
+    use async_compatibility_layer::logging::setup_logging;
     use hotshot_query_service::data_source::sql::testing::TmpDb;
 
     use super::PostgresClient;
     use crate::DatabaseOptions;
 
-    #[async_std::test]
-    async fn test_database_connection() {
-        let db = TmpDb::init().await;
+    pub async fn setup_mock_database() -> (TmpDb, PostgresClient) {
+        let db: TmpDb = TmpDb::init().await;
         let host = db.host();
         let port = db.port();
 
@@ -109,10 +111,21 @@ mod test {
             migrations: true,
         };
 
-        let client = PostgresClient::connect(opts)
-            .await
-            .expect("failed to connect to database");
+        // TmpDb will be dropped, which will cause the Docker container to be killed.
+        // Therefore, it is returned and kept in scope until needed.
+        (
+            db,
+            PostgresClient::connect(opts)
+                .await
+                .expect("failed to connect to database"),
+        )
+    }
 
+    #[async_std::test]
+    async fn test_database_connection() {
+        setup_logging();
+
+        let (tmpdb, client) = setup_mock_database().await;
         let pool = client.pool();
 
         sqlx::query("INSERT INTO test (str) VALUES ('testing');")
@@ -126,5 +139,7 @@ mod test {
             .unwrap();
 
         assert_eq!(result, 1);
+
+        drop(tmpdb);
     }
 }

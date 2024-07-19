@@ -1,33 +1,32 @@
-use std::sync::Arc;
+use std::collections::HashMap;
 
-use anyhow::Context;
-use async_std::sync::RwLock;
 use async_trait::async_trait;
 use espresso_types::{NamespaceId, PubKey, SeqTypes};
-use hotshot_types::{data::ViewNumber, traits::node_implementation::NodeType, PeerConfig};
+use hotshot_types::{
+    data::ViewNumber, signature_key::BuilderKey, traits::node_implementation::NodeType, PeerConfig,
+};
 
-use crate::{database::PostgresClient, DatabaseOptions};
+use crate::database::PostgresClient;
 
 // TODO ED: Implement a shared solver state with the HotShot events received
 pub struct GlobalState {
-    pub solver: Arc<RwLock<SolverState>>,
+    pub solver: SolverState,
     pub persistence: PostgresClient,
 }
 
 impl GlobalState {
-    pub async fn new(opts: DatabaseOptions, state: SolverState) -> anyhow::Result<Self> {
+    pub async fn new(db: PostgresClient, state: SolverState) -> anyhow::Result<Self> {
         Ok(Self {
-            solver: Arc::new(RwLock::new(state)),
-            persistence: opts
-                .connect()
-                .await
-                .context("failed to connect to database")?,
+            solver: state,
+            persistence: db,
         })
     }
 }
 
 pub struct SolverState {
     pub stake_table: StakeTable,
+    // todo (abdul) : () will be replaced w BidTx
+    pub bid_txs: HashMap<ViewNumber, HashMap<BuilderKey, ()>>,
 }
 
 pub struct StakeTable {
@@ -70,14 +69,14 @@ impl UpdateSolverState for GlobalState {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl GlobalState {
     pub async fn mock() -> Self {
         let db = hotshot_query_service::data_source::sql::testing::TmpDb::init().await;
         let host = db.host();
         let port = db.port();
 
-        let opts = DatabaseOptions {
+        let opts = crate::DatabaseOptions {
             url: None,
             host: Some(host),
             port: Some(port),
@@ -95,19 +94,20 @@ impl GlobalState {
             .expect("failed to connect to database");
 
         Self {
-            solver: Arc::new(RwLock::new(SolverState::mock())),
+            solver: SolverState::mock(),
             persistence: client,
         }
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl SolverState {
     pub fn mock() -> Self {
         Self {
             stake_table: StakeTable {
                 known_nodes_with_stake: crate::mock::generate_stake_table(),
             },
+            bid_txs: Default::default(),
         }
     }
 }

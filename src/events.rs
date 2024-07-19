@@ -26,7 +26,7 @@ impl EventsServiceClient {
     pub async fn get_startup_info(
         &self,
     ) -> Result<StartupInfo<SeqTypes>, hotshot_events_service::events::Error> {
-        self.0.get("hotshot-events/startup_info").send().await
+        self.0.get("startup_info").send().await
     }
 
     pub async fn get_event_stream(
@@ -35,7 +35,7 @@ impl EventsServiceClient {
     {
         let stream = self
             .0
-            .socket("hotshot-events/events")
+            .socket("events")
             .subscribe::<Event<SeqTypes>>()
             .await
             .context("failed to get event stream")?;
@@ -148,7 +148,7 @@ pub mod mock {
         }
     }
 
-    pub fn run_event_service() -> (Url, JoinHandle<Result<(), std::io::Error>>, JoinHandle<()>) {
+    pub fn run_mock_event_service() -> (Url, JoinHandle<()>, JoinHandle<()>) {
         let port = pick_unused_port().expect("no free port");
         let url = Url::parse(format!("http://localhost:{port}").as_str()).unwrap();
 
@@ -166,21 +166,30 @@ pub mod mock {
             hotshot_events_service::events::define_api::<_, _, StaticVer01>(&Default::default())
                 .expect("Failed to define hotshot eventsAPI");
 
-        app.register_module("api", hotshot_events_api)
+        app.register_module("events_api", hotshot_events_api)
             .expect("Failed to register hotshot events API");
 
-        let events_api_handle = async_spawn(app.serve(url.clone(), StaticVer01::instance()));
-        let generate_events_handle = async_spawn(generate_view_finished_events(events_streamer));
+        // cleanup with a function that takes in a a future
+        let events_api_handle = async_spawn({
+            let url = url.clone();
+            async move {
+                {
+                    let _ = app.serve(url, StaticVer01::instance()).await;
+                }
+            }
+        });
+        let generate_events_handle =
+            async_spawn(generate_view_finished_events(events_streamer.clone()));
 
-        let api_url = url.join("api").unwrap();
+        let url = url.join("events_api").unwrap();
 
-        (api_url, events_api_handle, generate_events_handle)
+        (url, events_api_handle, generate_events_handle)
     }
 
     #[async_std::test]
     async fn test_mock_events_service() {
         setup_logging();
-        let (url, _handle1, _handle2) = run_event_service();
+        let (url, handle1, handle2) = run_mock_event_service();
 
         tracing::info!("running event service");
 
@@ -212,5 +221,8 @@ pub mod mock {
                 break;
             }
         }
+
+        handle1.cancel().await;
+        handle2.cancel().await;
     }
 }
