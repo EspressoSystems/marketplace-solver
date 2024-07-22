@@ -33,11 +33,14 @@ impl PostgresClient {
             Some(url) => url.parse()?,
             None => {
                 let host = host.context("host not provided")?;
-                let port = port.context("port not provided")?;
+
                 let mut connect_opts = PgConnectOptions::new()
                     .host(&host)
-                    .port(port)
                     .ssl_mode(PgSslMode::Allow);
+
+                if let Some(port) = port {
+                    connect_opts = connect_opts.port(port);
+                }
 
                 if let Some(username) = username {
                     connect_opts = connect_opts.username(&username);
