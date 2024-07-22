@@ -6,6 +6,7 @@ use tide_disco::Url;
 
 use crate::database::PostgresClient;
 
+// todo (abdul) remove
 #[derive(Parser, Clone, Debug)]
 pub struct Options {
     #[clap(long, env = "HOTSHOT_EVENTS_API_URL")]
@@ -31,7 +32,7 @@ pub struct DatabaseOptions {
     #[clap(long, env = "MARKETPLACE_SOLVER_POSTGRES_DATABASE_NAME")]
     pub db_name: Option<String>,
 
-    #[clap(long, env = "MARKETPLACE_SOLVER_POSTGRES_USERNAME")]
+    #[clap(long, env = "MARKETPLACE_SOLVER_POSTGRES_USER")]
     pub username: Option<String>,
 
     #[clap(long, env = "MARKETPLACE_SOLVER_POSTGRES_PASSWORD")]
@@ -43,10 +44,18 @@ pub struct DatabaseOptions {
     #[clap(long,value_parser = parse_duration, env = "MARKETPLACE_SOLVER_DATABASE_ACQUIRE_TIMEOUT")]
     pub acquire_timeout: Option<Duration>,
 
-    #[clap(long,value_parser = parse_duration, env = "MARKETPLACE_SOLVER_DATABASE_REQUIRE_SSL", default_value_t = false)]
+    #[clap(
+        long,
+        env = "MARKETPLACE_SOLVER_DATABASE_REQUIRE_SSL",
+        default_value_t = false
+    )]
     pub require_ssl: bool,
 
-    #[clap(long,value_parser = parse_duration, env = "MARKETPLACE_SOLVER_DATABASE_RUN_MIGRATIONS",  default_value_t = true)]
+    #[clap(
+        long,
+        env = "MARKETPLACE_SOLVER_DATABASE_RUN_MIGRATIONS",
+        default_value_t = true
+    )]
     pub migrations: bool,
 }
 
