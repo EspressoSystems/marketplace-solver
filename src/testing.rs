@@ -1,4 +1,4 @@
-#![cfg(any(test, feature = "testing"))]
+#![cfg(all(any(test, feature = "testing"), not(target_os = "windows")))]
 #![allow(dead_code)]
 use std::sync::Arc;
 
@@ -8,12 +8,11 @@ use espresso_types::SeqTypes;
 use hotshot_query_service::data_source::sql::testing::TmpDb;
 use hotshot_types::traits::node_implementation::NodeType;
 use portpicker::pick_unused_port;
-use surf_disco::Client;
 use tide_disco::{App, Url};
 use vbs::version::StaticVersionType;
 
 use crate::{
-    database::{test::setup_mock_database, PostgresClient},
+    database::{mock::setup_mock_database, PostgresClient},
     define_api, handle_events,
     mock::run_mock_event_service,
     state::{GlobalState, SolverState, StakeTable},
@@ -66,9 +65,7 @@ impl MockSolver {
         };
 
         let state = Arc::new(RwLock::new(
-            GlobalState::new(database.clone(), solver_state)
-                .await
-                .unwrap(),
+            GlobalState::new(database.clone(), solver_state).unwrap(),
         ));
 
         let event_handler_handle = async_spawn({
@@ -125,7 +122,7 @@ async fn test_solver_api() {
 
     let solver_api = mock_solver.solver_api();
 
-    let client = Client::<SolverError, <SeqTypes as NodeType>::Base>::new(solver_api);
+    let client = surf_disco::Client::<SolverError, <SeqTypes as NodeType>::Base>::new(solver_api);
 
     let result: String = client.post("submit_bid").send().await.unwrap();
     assert_eq!(result, "Bid Submitted".to_string());

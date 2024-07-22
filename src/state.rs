@@ -15,7 +15,7 @@ pub struct GlobalState {
 }
 
 impl GlobalState {
-    pub async fn new(db: PostgresClient, state: SolverState) -> anyhow::Result<Self> {
+    pub fn new(db: PostgresClient, state: SolverState) -> anyhow::Result<Self> {
         Ok(Self {
             solver: state,
             persistence: db,

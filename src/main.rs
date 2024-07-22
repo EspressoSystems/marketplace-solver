@@ -41,9 +41,7 @@ pub async fn main() {
         .connect()
         .await
         .expect("failed to create database");
-    let state = Arc::new(RwLock::new(
-        GlobalState::new(db, solver_state).await.unwrap(),
-    ));
+    let state = Arc::new(RwLock::new(GlobalState::new(db, solver_state).unwrap()));
 
     let _handle = async_spawn(handle_events(stream, state.clone()));
 
