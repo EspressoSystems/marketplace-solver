@@ -25,7 +25,7 @@ futures = "0.3"
 hotshot = { git = "https://github.com/EspressoSystems/HotShot.git", tag = "rc-0.5.61" }
 hotshot-events-service = { git = "https://github.com/EspressoSystems/hotshot-events-service.git", branch = "main" }
 hotshot-query-service = { git = "https://github.com/EspressoSystems/hotshot-query-service", tag = "rc-0.1.44", optional = true }
-hotshot-types = { git = "https://github.com/EspressoSystems/HotShot.git", tag = "rc-0.5.61" }
+hotshot-types = { git = "https://github.com/EspressoSystems/HotShot.git", tag = "rc-0.5.63" }
 portpicker = { version = "0.1", optional = true } 
 rand = "0.8.5"
 serde = { version = "1.0", features = ["derive"] }
