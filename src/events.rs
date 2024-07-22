@@ -70,16 +70,14 @@ pub async fn handle_events(
 pub mod mock {
     use std::{sync::Arc, time::Duration};
 
-    use ::rand::{OsRng, Rng};
-    use async_compatibility_layer::{art::async_spawn, logging::setup_logging};
+    use async_compatibility_layer::art::async_spawn;
     use async_std::{
-        stream::StreamExt,
         sync::RwLock,
         task::{sleep, JoinHandle},
     };
     use espresso_types::SeqTypes;
     use hotshot::rand::{self};
-    use hotshot_events_service::events_source::{EventConsumer, EventsStreamer, StartupInfo};
+    use hotshot_events_service::events_source::{EventConsumer, EventsStreamer};
     use hotshot_types::{
         data::ViewNumber,
         event::{Event, EventType},
@@ -89,14 +87,14 @@ pub mod mock {
         PeerConfig,
     };
     use portpicker::pick_unused_port;
-    use surf_disco::Client;
+    use rand::{rngs::OsRng, RngCore};
     use tide_disco::{App, Url};
     use vbs::version::{StaticVersion, StaticVersionType};
 
     const NON_STAKED_NODE_COUNT: usize = 10;
     const NODE_STAKE: u64 = 1;
     const STAKED_NODES: usize = 10;
-    type StaticVer01 = StaticVersion<0, 1>;
+    pub type StaticVer01 = StaticVersion<0, 1>;
 
     pub fn generate_stake_table() -> Vec<PeerConfig<BLSPubKey>> {
         (0..STAKED_NODES)
@@ -119,7 +117,6 @@ pub mod mock {
 
         let mut view_number = ViewNumber::new(1);
 
-        let mut rng = OsRng::new().expect("Failed to obtain OsRng");
         let mut count = 1;
         loop {
             while count % 10 != 0 {
@@ -141,7 +138,7 @@ pub mod mock {
             }
             count = 1;
 
-            let delay = 1000 + (u64::from(rng.next_u32()) % 1000);
+            let delay = 1000 + (u64::from(OsRng.next_u32()) % 1000);
             tracing::warn!("sleeping for {delay:?}ms...");
 
             sleep(Duration::from_millis(delay)).await
@@ -185,6 +182,18 @@ pub mod mock {
 
         (url, events_api_handle, generate_events_handle)
     }
+}
+
+#[cfg(test)]
+mod test {
+
+    use crate::mock::{run_mock_event_service, StaticVer01};
+    use async_compatibility_layer::logging::setup_logging;
+    use async_std::stream::StreamExt;
+    use espresso_types::SeqTypes;
+    use hotshot::types::Event;
+    use hotshot_events_service::events_source::StartupInfo;
+    use surf_disco::Client;
 
     #[async_std::test]
     async fn test_mock_events_service() {

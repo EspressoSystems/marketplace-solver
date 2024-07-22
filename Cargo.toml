@@ -4,10 +4,11 @@ version = "0.1.0"
 authors = ["Espresso Systems <hello@espressosys.com>"]
 edition = "2021"
 
+[features]
 testing = [
 	"hotshot-query-service",
 	"portpicker",
-	"rand ",
+	
 ]
 
 [dependencies]
@@ -23,7 +24,10 @@ espresso-types = { git = "https://github.com/EspressoSystems/espresso-sequencer.
 futures = "0.3"
 hotshot = { git = "https://github.com/EspressoSystems/HotShot.git", tag = "rc-0.5.61" }
 hotshot-events-service = { git = "https://github.com/EspressoSystems/hotshot-events-service.git", branch = "main" }
+hotshot-query-service = { git = "https://github.com/EspressoSystems/hotshot-query-service", tag = "rc-0.1.44", optional = true }
 hotshot-types = { git = "https://github.com/EspressoSystems/HotShot.git", tag = "rc-0.5.61" }
+portpicker = { version = "0.1", optional = true } 
+rand = "0.8.5"
 serde = { version = "1.0", features = ["derive"] }
 snafu = "0.8"
 sqlx = { version = "0.7.4", features = [ "postgres", "macros" ] }
@@ -35,5 +39,4 @@ vbs = "0.1"
 
 [dev-dependencies]
 hotshot-query-service = { git = "https://github.com/EspressoSystems/hotshot-query-service", tag = "rc-0.1.44" }
-portpicker = "0.1"
-rand = "0.3.0"
+portpicker = { version = "0.1" }

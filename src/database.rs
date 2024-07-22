@@ -85,9 +85,8 @@ impl PostgresClient {
     }
 }
 
-#[cfg(all(test, not(target_os = "windows")))]
-pub mod test {
-    use async_compatibility_layer::logging::setup_logging;
+#[cfg(all(any(test, feature = "testing"), not(target_os = "windows")))]
+pub mod mock {
     use hotshot_query_service::data_source::sql::testing::TmpDb;
 
     use super::PostgresClient;
@@ -120,6 +119,13 @@ pub mod test {
                 .expect("failed to connect to database"),
         )
     }
+}
+
+#[cfg(all(test, not(target_os = "windows")))]
+mod test {
+    use async_compatibility_layer::logging::setup_logging;
+
+    use crate::database::mock::setup_mock_database;
 
     #[async_std::test]
     async fn test_database_connection() {
