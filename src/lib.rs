@@ -9,3 +9,5 @@ pub mod types;
 pub use api::*;
 pub use events::*;
 pub use options::*;
+
+type SolverResult<T> = Result<T, SolverError>;

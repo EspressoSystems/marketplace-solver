@@ -1,6 +1,8 @@
 use espresso_types::{FeeAmount, NamespaceId, SeqTypes};
 use hotshot_types::traits::node_implementation::NodeType;
+use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RollupRegistration {
     pub namespace_id: NamespaceId,
     // Denominated in Wei
@@ -15,6 +17,7 @@ pub struct RollupRegistration {
     pub signature: <SeqTypes as NodeType>::SignatureKey,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RollupUpdate {
     pub namespace_id: Option<NamespaceId>,
     // Denominated in Wei

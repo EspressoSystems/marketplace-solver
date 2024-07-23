@@ -3,22 +3,40 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use espresso_types::NamespaceId;
 use futures::FutureExt;
 use serde::{Deserialize, Serialize};
-use snafu::Snafu;
+use thiserror::Error;
 use tide_disco::{
     api::ApiError,
     method::{ReadState, WriteState},
-    Api, StatusCode,
+    Api, RequestError, StatusCode,
 };
 use toml::{map::Entry, Value};
 use vbs::version::StaticVersionType;
 
-use crate::state::UpdateSolverState;
+use crate::{state::UpdateSolverState, types::RollupRegistration};
 
-#[derive(Clone, Debug, Deserialize, Serialize, Snafu)]
+#[derive(Debug, Error, Serialize, Deserialize)]
 pub enum SolverError {
+    #[error("rollup already exists: {0}")]
+    RollupAlreadyExists(NamespaceId),
+    #[error("Invalid signature: {0}")]
+    InvalidSignature(String),
+    #[error("bincode err: {0}")]
+    BincodeError(String),
+    #[error("database err: {0}")]
+    Database(String),
+    #[error("request error: {0}")]
+    Request(#[from] RequestError),
+    #[error("err {status:?} : {message:?}")]
     Custom { status: StatusCode, message: String },
+}
+
+impl From<Box<bincode::ErrorKind>> for SolverError {
+    fn from(err: Box<bincode::ErrorKind>) -> Self {
+        Self::BincodeError(err.to_string())
+    }
 }
 
 impl tide_disco::Error for SolverError {
@@ -28,7 +46,9 @@ impl tide_disco::Error for SolverError {
 
     fn status(&self) -> StatusCode {
         match self {
+            Self::InvalidSignature(_) => StatusCode::FORBIDDEN,
             Self::Custom { status, .. } => *status,
+            _ => StatusCode::BAD_REQUEST,
         }
     }
 }
@@ -68,8 +88,12 @@ where
     .get("auction_results_permissioned", |_req, _state| {
         async move { Ok("Permissioned Auction Results Gotten") }.boxed()
     })?
-    .post("register_rollup", |_req, _state| {
-        async move { Ok("Rollup Registered") }.boxed()
+    .post("register_rollup", |req, state| {
+        async move {
+            let body = req.body_json::<RollupRegistration>()?;
+            state.register_rollup(body).await
+        }
+        .boxed()
     })?
     .post("update_rollup", |_req, _state| {
         async move { Ok("Rollup Updated") }.boxed()

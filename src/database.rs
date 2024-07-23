@@ -6,7 +6,7 @@ use sqlx::{
 };
 use tide_disco::Url;
 
-use crate::DatabaseOptions;
+use crate::{DatabaseOptions, SolverError};
 
 // PgPool is wrapped in an Arc internally so cloning here increments the reference count
 #[derive(Clone)]
@@ -85,6 +85,12 @@ impl PostgresClient {
 
     pub async fn acquire(&self) -> Result<PoolConnection<Postgres>, Error> {
         self.0.acquire().await
+    }
+}
+
+impl From<sqlx::Error> for SolverError {
+    fn from(err: sqlx::Error) -> Self {
+        Self::Database(err.to_string())
     }
 }
 

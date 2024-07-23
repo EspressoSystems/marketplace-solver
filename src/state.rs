@@ -1,24 +1,36 @@
 use std::collections::HashMap;
 
+use crate::{database::PostgresClient, types::RollupRegistration, SolverError, SolverResult};
 use async_trait::async_trait;
 use espresso_types::{NamespaceId, PubKey, SeqTypes};
 use hotshot_types::{
     data::ViewNumber, signature_key::BuilderKey, traits::node_implementation::NodeType, PeerConfig,
 };
-
-use crate::database::PostgresClient;
+use serde::Deserialize;
+use serde::Serialize;
+use sqlx::{FromRow, PgPool};
 
 // TODO ED: Implement a shared solver state with the HotShot events received
 pub struct GlobalState {
-    pub solver: SolverState,
-    pub persistence: PostgresClient,
+    solver: SolverState,
+    database: PostgresClient,
+}
+
+impl GlobalState {
+    pub fn solver(&self) -> &SolverState {
+        &self.solver
+    }
+
+    pub fn database(&self) -> &PgPool {
+        self.database.pool()
+    }
 }
 
 impl GlobalState {
     pub fn new(db: PostgresClient, state: SolverState) -> anyhow::Result<Self> {
         Ok(Self {
             solver: state,
-            persistence: db,
+            database: db,
         })
     }
 }
@@ -35,10 +47,10 @@ pub struct StakeTable {
 
 #[async_trait]
 pub trait UpdateSolverState {
-    // TODO (abdul) : add BidTx from types crate once https://github.com/EspressoSystems/espresso-sequencer/pull/1696 is merged
+    // TODO (abdul) : add BidTx from types crate.
     async fn submit_bix_tx(&mut self) -> anyhow::Result<()>;
     // TODO (abdul)
-    async fn register_rollup(&self);
+    async fn register_rollup(&self, registration: RollupRegistration) -> SolverResult<()>;
     async fn update_rollup_registration(&self, namespace_id: NamespaceId);
     async fn get_all_rollup_registrations(&self);
     // TODO (abdul) : return AuctionResults
@@ -55,11 +67,59 @@ impl UpdateSolverState for GlobalState {
         Ok(())
     }
 
-    async fn register_rollup(&self) {}
+    async fn register_rollup(&self, registration: RollupRegistration) -> Result<(), SolverError> {
+        let signature = &registration.signature;
+        let signatures = &registration.signature_keys;
+        if !signatures.contains(signature) {
+            return Err(SolverError::InvalidSignature(signature.to_string()));
+        };
+
+        let db = self.database();
+
+        let namespace_id = registration.namespace_id;
+
+        let exists: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM rollup_registrations where namespace_id = $1;",
+        )
+        .bind(u64::from(namespace_id) as i64)
+        .fetch_one(db)
+        .await
+        .map_err(SolverError::from)?;
+
+        if exists {
+            return Err(SolverError::RollupAlreadyExists(namespace_id));
+        }
+
+        let bytes = bincode::serialize(&registration).map_err(SolverError::from)?;
+
+        let result = sqlx::query("INSERT INTO rollup_registrations VALUES ($1, $2);")
+            .bind(u64::from(namespace_id) as i64)
+            .bind(&bytes)
+            .execute(db)
+            .await
+            .map_err(SolverError::from)?;
+
+        if !result.rows_affected() != 1 {
+            return Err(SolverError::Database(format!(
+                "invalid num of rows affected. rows affected: {:?}",
+                result.rows_affected()
+            )));
+        }
+
+        Ok(())
+    }
 
     async fn update_rollup_registration(&self, _namespace_id: NamespaceId) {}
 
-    async fn get_all_rollup_registrations(&self) {}
+    async fn get_all_rollup_registrations(&self) -> SolverResult<Vec<RollupRegistration>> {
+        let db = self.database();
+
+        let result: Vec<RollupRegistrationResult> =
+            sqlx::query_as("SELECT data from rollup_registrations;")
+                .fetch_all(db)
+                .await
+                .map_err(SolverError::from)?;
+    }
 
     async fn calculate_auction_results_permissionless(_view_number: ViewNumber) {}
     async fn calculate_auction_results_permissioned(
@@ -68,6 +128,14 @@ impl UpdateSolverState for GlobalState {
     ) {
     }
 }
+
+#[derive(Debug, Deserialize, Serialize, FromRow)]
+struct RollupRegistrationResult {
+    namespace_id: i64,
+    data: Vec<u8>,
+}
+
+
 
 #[cfg(any(test, feature = "testing"))]
 impl GlobalState {
@@ -95,7 +163,7 @@ impl GlobalState {
 
         Self {
             solver: SolverState::mock(),
-            persistence: client,
+            database: client,
         }
     }
 }
