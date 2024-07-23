@@ -52,7 +52,7 @@ pub trait UpdateSolverState {
     // TODO (abdul)
     async fn register_rollup(&self, registration: RollupRegistration) -> SolverResult<()>;
     async fn update_rollup_registration(&self, namespace_id: NamespaceId);
-    async fn get_all_rollup_registrations(&self);
+    async fn get_all_rollup_registrations(&self) -> SolverResult<Vec<RollupRegistration>>;
     // TODO (abdul) : return AuctionResults
     async fn calculate_auction_results_permissionless(_view_number: ViewNumber);
     async fn calculate_auction_results_permissioned(
@@ -114,11 +114,15 @@ impl UpdateSolverState for GlobalState {
     async fn get_all_rollup_registrations(&self) -> SolverResult<Vec<RollupRegistration>> {
         let db = self.database();
 
-        let result: Vec<RollupRegistrationResult> =
+        let rows: Vec<RollupRegistrationResult> =
             sqlx::query_as("SELECT data from rollup_registrations;")
                 .fetch_all(db)
                 .await
                 .map_err(SolverError::from)?;
+
+        rows.iter()
+            .map(|r| bincode::deserialize(&r.data).map_err(SolverError::from))
+            .collect::<SolverResult<Vec<RollupRegistration>>>()
     }
 
     async fn calculate_auction_results_permissionless(_view_number: ViewNumber) {}
@@ -134,8 +138,6 @@ struct RollupRegistrationResult {
     namespace_id: i64,
     data: Vec<u8>,
 }
-
-
 
 #[cfg(any(test, feature = "testing"))]
 impl GlobalState {

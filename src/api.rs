@@ -98,8 +98,8 @@ where
     .post("update_rollup", |_req, _state| {
         async move { Ok("Rollup Updated") }.boxed()
     })?
-    .get("rollup_registrations", |_req, _state| {
-        async move { Ok("Rollup Registrations Gotten") }.boxed()
+    .get("rollup_registrations", |_req, state| {
+        async move { state.get_all_rollup_registrations().await }.boxed()
     })?;
     Ok(api)
 }
