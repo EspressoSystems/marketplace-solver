@@ -11,7 +11,7 @@ use sqlx::{FromRow, PgPool};
 
 use crate::{
     database::PostgresClient,
-    serde_json_err,
+    overflow_err, serde_json_err,
     types::{RollupRegistration, RollupUpdate},
     SolverError, SolverResult,
 };
@@ -96,7 +96,7 @@ impl UpdateSolverState for GlobalState {
         let exists: bool = sqlx::query_scalar(
             "SELECT EXISTS(SELECT 1 FROM rollup_registrations where namespace_id = $1);",
         )
-        .bind(u64::from(namespace_id) as i64)
+        .bind::<i64>(u64::from(namespace_id).try_into().map_err(overflow_err)?)
         .fetch_one(db)
         .await
         .map_err(SolverError::from)?;
@@ -108,7 +108,7 @@ impl UpdateSolverState for GlobalState {
         let json = serde_json::to_value(&registration).map_err(serde_json_err)?;
 
         let result = sqlx::query("INSERT INTO rollup_registrations VALUES ($1, $2);")
-            .bind(u64::from(namespace_id) as i64)
+            .bind::<i64>(u64::from(namespace_id).try_into().map_err(overflow_err)?)
             .bind(&json)
             .execute(db)
             .await
@@ -141,7 +141,7 @@ impl UpdateSolverState for GlobalState {
 
         let result: RollupRegistrationResult =
             sqlx::query_as("SELECT * from rollup_registrations where namespace_id = $1;")
-                .bind(u64::from(namespace_id) as i64)
+                .bind::<i64>(u64::from(namespace_id).try_into().map_err(overflow_err)?)
                 .fetch_one(db)
                 .await
                 .map_err(SolverError::from)?;
@@ -182,7 +182,7 @@ impl UpdateSolverState for GlobalState {
         let result =
             sqlx::query("UPDATE rollup_registrations SET data = $1  WHERE namespace_id = $2;")
                 .bind(&value)
-                .bind(u64::from(namespace_id) as i64)
+                .bind::<i64>(u64::from(namespace_id).try_into().map_err(overflow_err)?)
                 .execute(db)
                 .await
                 .map_err(SolverError::from)?;

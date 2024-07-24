@@ -40,6 +40,13 @@ pub enum SolverError {
     Custom { status: StatusCode, message: String },
 }
 
+pub(crate) fn overflow_err(err: std::num::TryFromIntError) -> SolverError {
+    SolverError::Custom {
+        status: StatusCode::BAD_REQUEST,
+        message: format!("overflow {err}"),
+    }
+}
+
 pub(crate) fn serde_json_err(err: serde_json::Error) -> SolverError {
     SolverError::SerdeJsonError(err.to_string())
 }
