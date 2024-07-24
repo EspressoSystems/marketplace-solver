@@ -23,7 +23,7 @@ cld = "0.5"
 espresso-types = { git = "https://github.com/EspressoSystems/espresso-sequencer.git", branch = "main", features = [ "testing" ] }
 futures = "0.3"
 hotshot = { git = "https://github.com/EspressoSystems/HotShot.git", tag = "rc-0.5.63" }
-hotshot-events-service = { git = "https://github.com/EspressoSystems/hotshot-events-service.git", tag = "rc-0.1.33" }
+hotshot-events-service = { git = "https://github.com/EspressoSystems/hotshot-events-service.git", tag = "rc-0.1.34" }
 hotshot-query-service = { git = "https://github.com/EspressoSystems/hotshot-query-service", tag = "rc-0.1.45", optional = true }
 hotshot-types = { git = "https://github.com/EspressoSystems/HotShot.git", tag = "rc-0.5.63" }
 portpicker = { version = "0.1", optional = true } 
