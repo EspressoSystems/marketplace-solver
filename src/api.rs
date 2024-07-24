@@ -57,7 +57,6 @@ impl tide_disco::Error for SolverError {
 
     fn status(&self) -> StatusCode {
         match self {
-            Self::InvalidSignature(_) => StatusCode::FORBIDDEN,
             Self::Custom { status, .. } => *status,
             _ => StatusCode::BAD_REQUEST,
         }
