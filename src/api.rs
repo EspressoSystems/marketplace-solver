@@ -15,7 +15,10 @@ use tide_disco::{
 use toml::{map::Entry, Value};
 use vbs::version::StaticVersionType;
 
-use crate::{state::UpdateSolverState, types::RollupRegistration};
+use crate::{
+    state::UpdateSolverState,
+    types::{RollupRegistration, RollupUpdate},
+};
 
 #[derive(Debug, Error, Serialize, Deserialize)]
 pub enum SolverError {
@@ -29,10 +32,16 @@ pub enum SolverError {
     BincodeError(String),
     #[error("database err: {0}")]
     Database(String),
+    #[error("serde json err: {0}")]
+    SerdeJsonError(String),
     #[error("request error: {0}")]
     Request(#[from] RequestError),
     #[error("err {status:?} : {message:?}")]
     Custom { status: StatusCode, message: String },
+}
+
+pub(crate) fn serde_json_err(err: serde_json::Error) -> SolverError {
+    SolverError::SerdeJsonError(err.to_string())
 }
 
 impl From<Box<bincode::ErrorKind>> for SolverError {
@@ -97,8 +106,12 @@ where
         }
         .boxed()
     })?
-    .post("update_rollup", |_req, _state| {
-        async move { Ok("Rollup Updated") }.boxed()
+    .post("update_rollup", |req, state| {
+        async move {
+            let body = req.body_json::<RollupUpdate>()?;
+            state.update_rollup_registration(body).await
+        }
+        .boxed()
     })?
     .get("rollup_registrations", |_req, state| {
         async move { state.get_all_rollup_registrations().await }.boxed()

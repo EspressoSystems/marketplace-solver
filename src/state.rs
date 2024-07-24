@@ -1,15 +1,20 @@
 use std::collections::HashMap;
 
-use crate::types::RollupUpdate;
-use crate::{database::PostgresClient, types::RollupRegistration, SolverError, SolverResult};
 use async_trait::async_trait;
 use espresso_types::{PubKey, SeqTypes};
 use hotshot_types::{
     data::ViewNumber, signature_key::BuilderKey, traits::node_implementation::NodeType, PeerConfig,
 };
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sqlx::{FromRow, PgPool};
+
+use crate::{
+    database::PostgresClient,
+    serde_json_err,
+    types::{RollupRegistration, RollupUpdate},
+    SolverError, SolverResult,
+};
 
 // TODO ED: Implement a shared solver state with the HotShot events received
 pub struct GlobalState {
@@ -51,8 +56,14 @@ pub trait UpdateSolverState {
     // TODO (abdul) : add BidTx from types crate.
     async fn submit_bix_tx(&mut self) -> anyhow::Result<()>;
     // TODO (abdul)
-    async fn register_rollup(&self, registration: RollupRegistration) -> SolverResult<()>;
-    async fn update_rollup_registration(&self, update: RollupUpdate) -> SolverResult<()>;
+    async fn register_rollup(
+        &self,
+        registration: RollupRegistration,
+    ) -> SolverResult<RollupRegistration>;
+    async fn update_rollup_registration(
+        &self,
+        update: RollupUpdate,
+    ) -> SolverResult<RollupRegistration>;
     async fn get_all_rollup_registrations(&self) -> SolverResult<Vec<RollupRegistration>>;
     // TODO (abdul) : return AuctionResults
     async fn calculate_auction_results_permissionless(_view_number: ViewNumber);
@@ -68,7 +79,10 @@ impl UpdateSolverState for GlobalState {
         Ok(())
     }
 
-    async fn register_rollup(&self, registration: RollupRegistration) -> Result<(), SolverError> {
+    async fn register_rollup(
+        &self,
+        registration: RollupRegistration,
+    ) -> Result<RollupRegistration, SolverError> {
         let signature = &registration.signature;
         let signatures = &registration.signature_keys;
         if !signatures.contains(signature) {
@@ -80,7 +94,7 @@ impl UpdateSolverState for GlobalState {
         let namespace_id = registration.namespace_id;
 
         let exists: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM rollup_registrations where namespace_id = $1;",
+            "SELECT EXISTS(SELECT 1 FROM rollup_registrations where namespace_id = $1);",
         )
         .bind(u64::from(namespace_id) as i64)
         .fetch_one(db)
@@ -91,28 +105,29 @@ impl UpdateSolverState for GlobalState {
             return Err(SolverError::RollupAlreadyExists(namespace_id));
         }
 
-        let bytes = bincode::serialize(&registration).map_err(SolverError::from)?;
+        let json = serde_json::to_value(&registration).map_err(serde_json_err)?;
 
         let result = sqlx::query("INSERT INTO rollup_registrations VALUES ($1, $2);")
             .bind(u64::from(namespace_id) as i64)
-            .bind(&bytes)
+            .bind(&json)
             .execute(db)
             .await
             .map_err(SolverError::from)?;
 
-        if !result.rows_affected() != 1 {
+        if result.rows_affected() != 1 {
             return Err(SolverError::Database(format!(
                 "invalid num of rows affected. rows affected: {:?}",
                 result.rows_affected()
             )));
         }
 
-        Ok(())
+        Ok(registration)
     }
 
-    async fn update_rollup_registration(&self, update: RollupUpdate) -> SolverResult<()> {
-        // check if rollup is registered
-
+    async fn update_rollup_registration(
+        &self,
+        update: RollupUpdate,
+    ) -> SolverResult<RollupRegistration> {
         let db = self.database();
 
         let RollupUpdate {
@@ -125,14 +140,14 @@ impl UpdateSolverState for GlobalState {
         } = update;
 
         let result: RollupRegistrationResult =
-            sqlx::query_as("SELECT data from rollup_registrations where namespace_id = $1;")
+            sqlx::query_as("SELECT * from rollup_registrations where namespace_id = $1;")
                 .bind(u64::from(namespace_id) as i64)
                 .fetch_one(db)
                 .await
                 .map_err(SolverError::from)?;
 
         let mut registration =
-            bincode::deserialize::<RollupRegistration>(&result.data).map_err(SolverError::from)?;
+            serde_json::from_value::<RollupRegistration>(result.data).map_err(serde_json_err)?;
 
         if !registration.signature_keys.contains(&signature) {
             return Err(SolverError::SignatureDatabaseKeysMismatch(
@@ -162,36 +177,37 @@ impl UpdateSolverState for GlobalState {
             registration.text = text;
         }
 
-        let bytes = bincode::serialize(&registration).map_err(SolverError::from)?;
+        let value = serde_json::to_value(&registration).map_err(serde_json_err)?;
 
-        let result = sqlx::query("INSERT INTO rollup_registrations VALUES ($1, $2);")
-            .bind(u64::from(namespace_id) as i64)
-            .bind(&bytes)
-            .execute(db)
-            .await
-            .map_err(SolverError::from)?;
+        let result =
+            sqlx::query("UPDATE rollup_registrations SET data = $1  WHERE namespace_id = $2;")
+                .bind(&value)
+                .bind(u64::from(namespace_id) as i64)
+                .execute(db)
+                .await
+                .map_err(SolverError::from)?;
 
-        if !result.rows_affected() != 1 {
+        if result.rows_affected() != 1 {
             return Err(SolverError::Database(format!(
                 "invalid num of rows affected. rows affected: {:?}",
                 result.rows_affected()
             )));
         }
 
-        Ok(())
+        Ok(registration)
     }
 
     async fn get_all_rollup_registrations(&self) -> SolverResult<Vec<RollupRegistration>> {
         let db = self.database();
 
         let rows: Vec<RollupRegistrationResult> =
-            sqlx::query_as("SELECT data from rollup_registrations;")
+            sqlx::query_as("SELECT * from rollup_registrations;")
                 .fetch_all(db)
                 .await
                 .map_err(SolverError::from)?;
 
         rows.iter()
-            .map(|r| bincode::deserialize(&r.data).map_err(SolverError::from))
+            .map(|r| serde_json::from_value(r.data.clone()).map_err(serde_json_err))
             .collect::<SolverResult<Vec<RollupRegistration>>>()
     }
 
@@ -206,7 +222,7 @@ impl UpdateSolverState for GlobalState {
 #[derive(Debug, Deserialize, Serialize, FromRow)]
 struct RollupRegistrationResult {
     namespace_id: i64,
-    data: Vec<u8>,
+    data: Value,
 }
 
 #[cfg(any(test, feature = "testing"))]
