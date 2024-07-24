@@ -23,6 +23,8 @@ pub enum SolverError {
     RollupAlreadyExists(NamespaceId),
     #[error("Invalid signature: {0}")]
     InvalidSignature(String),
+    #[error("Signature {0} does not match signatures in the database")]
+    SignatureDatabaseKeysMismatch(String),
     #[error("bincode err: {0}")]
     BincodeError(String),
     #[error("database err: {0}")]

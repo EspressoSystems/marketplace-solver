@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
+use crate::types::RollupUpdate;
 use crate::{database::PostgresClient, types::RollupRegistration, SolverError, SolverResult};
 use async_trait::async_trait;
-use espresso_types::{NamespaceId, PubKey, SeqTypes};
+use espresso_types::{PubKey, SeqTypes};
 use hotshot_types::{
     data::ViewNumber, signature_key::BuilderKey, traits::node_implementation::NodeType, PeerConfig,
 };
@@ -51,7 +52,7 @@ pub trait UpdateSolverState {
     async fn submit_bix_tx(&mut self) -> anyhow::Result<()>;
     // TODO (abdul)
     async fn register_rollup(&self, registration: RollupRegistration) -> SolverResult<()>;
-    async fn update_rollup_registration(&self, namespace_id: NamespaceId);
+    async fn update_rollup_registration(&self, update: RollupUpdate) -> SolverResult<()>;
     async fn get_all_rollup_registrations(&self) -> SolverResult<Vec<RollupRegistration>>;
     // TODO (abdul) : return AuctionResults
     async fn calculate_auction_results_permissionless(_view_number: ViewNumber);
@@ -109,7 +110,76 @@ impl UpdateSolverState for GlobalState {
         Ok(())
     }
 
-    async fn update_rollup_registration(&self, _namespace_id: NamespaceId) {}
+    async fn update_rollup_registration(&self, update: RollupUpdate) -> SolverResult<()> {
+        // check if rollup is registered
+
+        let db = self.database();
+
+        let RollupUpdate {
+            namespace_id,
+            reserve_price,
+            active,
+            signature_keys,
+            text,
+            signature,
+        } = update;
+
+        let result: RollupRegistrationResult =
+            sqlx::query_as("SELECT data from rollup_registrations where namespace_id = $1;")
+                .bind(u64::from(namespace_id) as i64)
+                .fetch_one(db)
+                .await
+                .map_err(SolverError::from)?;
+
+        let mut registration =
+            bincode::deserialize::<RollupRegistration>(&result.data).map_err(SolverError::from)?;
+
+        if !registration.signature_keys.contains(&signature) {
+            return Err(SolverError::SignatureDatabaseKeysMismatch(
+                signature.to_string(),
+            ));
+        }
+
+        if let Some(keys) = &signature_keys {
+            if !keys.contains(&signature) {
+                return Err(SolverError::InvalidSignature(signature.to_string()));
+            }
+        }
+
+        if let Some(rp) = reserve_price {
+            registration.reserve_price = rp;
+        }
+
+        if let Some(active) = active {
+            registration.active = active;
+        }
+
+        if let Some(keys) = signature_keys {
+            registration.signature_keys = keys;
+        }
+
+        if let Some(text) = text {
+            registration.text = text;
+        }
+
+        let bytes = bincode::serialize(&registration).map_err(SolverError::from)?;
+
+        let result = sqlx::query("INSERT INTO rollup_registrations VALUES ($1, $2);")
+            .bind(u64::from(namespace_id) as i64)
+            .bind(&bytes)
+            .execute(db)
+            .await
+            .map_err(SolverError::from)?;
+
+        if !result.rows_affected() != 1 {
+            return Err(SolverError::Database(format!(
+                "invalid num of rows affected. rows affected: {:?}",
+                result.rows_affected()
+            )));
+        }
+
+        Ok(())
+    }
 
     async fn get_all_rollup_registrations(&self) -> SolverResult<Vec<RollupRegistration>> {
         let db = self.database();
