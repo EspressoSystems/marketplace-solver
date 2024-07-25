@@ -139,6 +139,10 @@ impl UpdateSolverState for GlobalState {
             signature,
         } = update;
 
+        if !signature_keys.contains(&signature) {
+            return Err(SolverError::InvalidSignature(signature.to_string()));
+        }
+
         let result: RollupRegistrationResult =
             sqlx::query_as("SELECT * from rollup_registrations where namespace_id = $1;")
                 .bind::<i64>(u64::from(namespace_id).try_into().map_err(overflow_err)?)
@@ -155,12 +159,6 @@ impl UpdateSolverState for GlobalState {
             ));
         }
 
-        if let Some(keys) = &signature_keys {
-            if !keys.contains(&signature) {
-                return Err(SolverError::InvalidSignature(signature.to_string()));
-            }
-        }
-
         if let Some(rp) = reserve_price {
             registration.reserve_price = rp;
         }
@@ -169,9 +167,7 @@ impl UpdateSolverState for GlobalState {
             registration.active = active;
         }
 
-        if let Some(keys) = signature_keys {
-            registration.signature_keys = keys;
-        }
+        registration.signature_keys = signature_keys;
 
         if let Some(text) = text {
             registration.text = text;

@@ -216,7 +216,7 @@ mod test {
             namespace_id: reg_ns_1.namespace_id,
             reserve_price: None,
             active: Some(false),
-            signature_keys: None,
+            signature_keys: reg_ns_1.signature_keys.clone(),
             text: None,
             signature,
         };
@@ -258,7 +258,7 @@ mod test {
             namespace_id: 1_u64.into(),
             reserve_price: None,
             active: Some(false),
-            signature_keys: None,
+            signature_keys: vec![signature],
             text: None,
             signature,
         };
