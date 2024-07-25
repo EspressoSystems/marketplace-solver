@@ -1,14 +1,15 @@
 use committable::{Commitment, Committable};
-use espresso_types::{FeeAmount, NamespaceId};
-use hotshot::types::{BLSPubKey, SignatureKey};
-use jf_signature::bls_over_bn254::Signature;
+use espresso_types::{FeeAmount, NamespaceId, SeqTypes};
+use hotshot::types::SignatureKey;
+use hotshot_types::traits::node_implementation::NodeType;
 use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Serialize, Deserialize, Debug, Clone)]
 pub struct RollupRegistration {
     pub body: RollupRegistrationBody,
     // signature over the above data (must be from a key in the 'signature_keys` list)
-    pub signature: Signature,
+    pub signature:
+        <<SeqTypes as NodeType>::SignatureKey as SignatureKey>::PureAssembledSignatureType,
 }
 
 #[derive(PartialEq, Serialize, Deserialize, Debug, Clone)]
@@ -19,9 +20,9 @@ pub struct RollupRegistrationBody {
     // whether this registration is active in the marketplace
     pub active: bool,
     // a list of keys authorized to update the registration information
-    pub signature_keys: Vec<BLSPubKey>,
+    pub signature_keys: Vec<<SeqTypes as NodeType>::SignatureKey>,
     // The signature key used to sign this registration body
-    pub signature_key: BLSPubKey,
+    pub signature_key: <SeqTypes as NodeType>::SignatureKey,
     // Optional field for human readable information
     pub text: String,
 }
@@ -60,7 +61,8 @@ impl Committable for RollupRegistrationBody {
 pub struct RollupUpdate {
     pub body: RollupUpdatebody,
     // signature over the above data (must be from a key in the 'signature_keys` list)
-    pub signature: Signature,
+    pub signature:
+        <<SeqTypes as NodeType>::SignatureKey as SignatureKey>::PureAssembledSignatureType,
 }
 
 #[derive(PartialEq, Serialize, Deserialize, Debug, Clone)]
@@ -71,9 +73,9 @@ pub struct RollupUpdatebody {
     // whether this registration is active in the marketplace
     pub active: Option<bool>,
     // a list of keys authorized to update the registration information
-    pub signature_keys: Option<Vec<BLSPubKey>>,
-    // The signature key used to sign this registration body
-    pub signature_key: BLSPubKey,
+    pub signature_keys: Option<Vec<<SeqTypes as NodeType>::SignatureKey>>,
+    // The signature key used to sign this update body
+    pub signature_key: <SeqTypes as NodeType>::SignatureKey,
     // Optional field for human readable information
     pub text: Option<String>,
 }
