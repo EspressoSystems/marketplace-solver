@@ -1,7 +1,7 @@
 use std::{str::FromStr, time::Duration};
 
 use clap::Parser;
-use snafu::Snafu;
+use thiserror::Error;
 use tide_disco::Url;
 
 use crate::database::PostgresClient;
@@ -65,15 +65,12 @@ impl DatabaseOptions {
     }
 }
 
-#[derive(Clone, Debug, Snafu)]
-pub struct ParseDurationError {
-    reason: String,
-}
+#[derive(Clone, Debug, Error)]
+#[error("failed to parse `{0}`")]
+pub struct ParseDurationError(String);
 
 pub fn parse_duration(s: &str) -> Result<Duration, ParseDurationError> {
     cld::ClDuration::from_str(s)
         .map(Duration::from)
-        .map_err(|err| ParseDurationError {
-            reason: err.to_string(),
-        })
+        .map_err(|err| ParseDurationError(err.to_string()))
 }

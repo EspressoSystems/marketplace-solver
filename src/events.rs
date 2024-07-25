@@ -187,13 +187,14 @@ pub mod mock {
 #[cfg(test)]
 mod test {
 
-    use crate::mock::{run_mock_event_service, StaticVer01};
     use async_compatibility_layer::logging::setup_logging;
     use async_std::stream::StreamExt;
     use espresso_types::SeqTypes;
     use hotshot::types::Event;
     use hotshot_events_service::events_source::StartupInfo;
     use surf_disco::Client;
+
+    use crate::mock::{run_mock_event_service, StaticVer01};
 
     #[async_std::test]
     async fn test_mock_events_service() {
