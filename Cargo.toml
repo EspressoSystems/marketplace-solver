@@ -27,7 +27,7 @@ futures = "0.3"
 hotshot = { git = "https://github.com/EspressoSystems/HotShot.git", tag = "rc-0.5.64" }
 hotshot-events-service = { git = "https://github.com/EspressoSystems/hotshot-events-service.git", tag = "rc-0.1.35" }
 hotshot-query-service = { git = "https://github.com/EspressoSystems/hotshot-query-service", tag = "rc-0.1.46", optional = true }
-hotshot-types = { git = "https://github.com/EspressoSystems/HotShot.git", tag = "rc-0.5.64" }
+hotshot-types = { git = "https://github.com/EspressoSystems/HotShot.git", tag = "rc-0.5.66" }
 jf-signature = { version = "0.1.0", git = "https://github.com/EspressoSystems/jellyfish", tag = "0.4.5", features = [
   "std",
 ] }
