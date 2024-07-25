@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
+use committable::Committable;
 use espresso_types::{PubKey, SeqTypes};
+use hotshot::types::SignatureKey;
 use hotshot_types::{
     data::ViewNumber, signature_key::BuilderKey, traits::node_implementation::NodeType, PeerConfig,
 };
@@ -12,7 +14,7 @@ use sqlx::{FromRow, PgPool};
 use crate::{
     database::PostgresClient,
     overflow_err, serde_json_err,
-    types::{RollupRegistration, RollupUpdate},
+    types::{RollupRegistration, RollupRegistrationBody, RollupUpdate, RollupUpdatebody},
     SolverError, SolverResult,
 };
 
@@ -83,15 +85,33 @@ impl UpdateSolverState for GlobalState {
         &self,
         registration: RollupRegistration,
     ) -> Result<RollupRegistration, SolverError> {
-        let signature = &registration.signature;
-        let signatures = &registration.signature_keys;
-        if !signatures.contains(signature) {
+        let RollupRegistration { body, signature } = registration.clone();
+
+        let commit = body.commit();
+
+        let RollupRegistrationBody {
+            namespace_id,
+            signature_keys,
+            signature_key,
+            ..
+        } = body;
+
+        if !signature_keys.contains(&signature_key) {
+            return Err(SolverError::SignatureKeysMismatch(signature.to_string()));
+        }
+
+        // check if signature provided is valid
+        let valid_signature = <SeqTypes as NodeType>::SignatureKey::validate(
+            &signature_key,
+            &signature,
+            commit.as_ref(),
+        );
+
+        if !valid_signature {
             return Err(SolverError::InvalidSignature(signature.to_string()));
-        };
+        }
 
         let db = self.database();
-
-        let namespace_id = registration.namespace_id;
 
         let exists: bool = sqlx::query_scalar(
             "SELECT EXISTS(SELECT 1 FROM rollup_registrations where namespace_id = $1);",
@@ -105,7 +125,7 @@ impl UpdateSolverState for GlobalState {
             return Err(SolverError::RollupAlreadyExists(namespace_id));
         }
 
-        let json = serde_json::to_value(&registration).map_err(serde_json_err)?;
+        let json = serde_json::to_value(registration.clone()).map_err(serde_json_err)?;
 
         let result = sqlx::query("INSERT INTO rollup_registrations VALUES ($1, $2);")
             .bind::<i64>(u64::from(namespace_id).try_into().map_err(overflow_err)?)
@@ -130,16 +150,26 @@ impl UpdateSolverState for GlobalState {
     ) -> SolverResult<RollupRegistration> {
         let db = self.database();
 
-        let RollupUpdate {
+        let RollupUpdate { body, signature } = update;
+
+        let commit = body.commit();
+
+        let RollupUpdatebody {
             namespace_id,
             reserve_price,
             active,
             signature_keys,
+            signature_key,
             text,
-            signature,
-        } = update;
+        } = body;
 
-        if !signature_keys.contains(&signature) {
+        let valid_signature = <SeqTypes as NodeType>::SignatureKey::validate(
+            &signature_key,
+            &signature,
+            commit.as_ref(),
+        );
+
+        if !valid_signature {
             return Err(SolverError::InvalidSignature(signature.to_string()));
         }
 
@@ -153,24 +183,34 @@ impl UpdateSolverState for GlobalState {
         let mut registration =
             serde_json::from_value::<RollupRegistration>(result.data).map_err(serde_json_err)?;
 
-        if !registration.signature_keys.contains(&signature) {
-            return Err(SolverError::SignatureDatabaseKeysMismatch(
-                signature.to_string(),
-            ));
-        }
-
         if let Some(rp) = reserve_price {
-            registration.reserve_price = rp;
+            registration.body.reserve_price = rp;
         }
 
         if let Some(active) = active {
-            registration.active = active;
+            registration.body.active = active;
         }
 
-        registration.signature_keys = signature_keys;
+        // The given signature key should also be from the database `signature_keys`.`
+        if !registration.body.signature_keys.contains(&signature_key) {
+            return Err(SolverError::SignatureKeysMismatch(
+                signature_key.to_string(),
+            ));
+        }
 
         if let Some(text) = text {
-            registration.text = text;
+            registration.body.text = text;
+        }
+
+        // If signature keys are provided for the update, verify that the given signature key is in the list
+        if let Some(keys) = signature_keys {
+            if !keys.contains(&signature_key) {
+                return Err(SolverError::SignatureKeysMismatch(
+                    signature_key.to_string(),
+                ));
+            }
+
+            registration.body.signature_keys = keys;
         }
 
         let value = serde_json::to_value(&registration).map_err(serde_json_err)?;
