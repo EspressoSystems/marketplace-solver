@@ -39,7 +39,7 @@ sqlx = { version = "0.7.4", features = [ "postgres", "macros" ] }
 surf-disco = "0.9"
 thiserror = "1.0"
 tide-disco = "0.9"
-toml = "0.8.14"
+toml = "0.8.16"
 tracing = "0.1"
 vbs = "0.1"
 
