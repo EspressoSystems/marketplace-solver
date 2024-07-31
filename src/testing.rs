@@ -119,19 +119,17 @@ impl MockSolver {
 #[cfg(test)]
 mod test {
 
-    use std::str::FromStr;
-
     use committable::Committable;
-    use espresso_types::SeqTypes;
+    use espresso_types::{
+        v0_3::{RollupRegistration, RollupRegistrationBody, RollupUpdate, RollupUpdatebody},
+        SeqTypes,
+    };
     use hotshot::types::{BLSPubKey, SignatureKey};
     use hotshot_types::traits::node_implementation::NodeType;
+    use std::str::FromStr;
     use tide_disco::Url;
 
-    use crate::{
-        testing::MockSolver,
-        types::{RollupRegistration, RollupRegistrationBody, RollupUpdate, RollupUpdatebody},
-        SolverError,
-    };
+    use crate::{testing::MockSolver, SolverError};
 
     #[async_std::test]
     async fn test_rollup_registration() {
