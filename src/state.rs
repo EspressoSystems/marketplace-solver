@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use committable::Committable;
-use espresso_types::{PubKey, SeqTypes};
+use espresso_types::{v0_3::SolverAuctionResults, PubKey, SeqTypes};
 use hotshot::types::SignatureKey;
 use hotshot_types::{
     data::ViewNumber, signature_key::BuilderKey, traits::node_implementation::NodeType, PeerConfig,
@@ -68,11 +68,15 @@ pub trait UpdateSolverState {
     ) -> SolverResult<RollupRegistration>;
     async fn get_all_rollup_registrations(&self) -> SolverResult<Vec<RollupRegistration>>;
     // TODO (abdul) : return AuctionResults
-    async fn calculate_auction_results_permissionless(_view_number: ViewNumber);
+    async fn calculate_auction_results_permissionless(
+        &self,
+        view_number: ViewNumber,
+    ) -> SolverResult<SolverAuctionResults>;
     async fn calculate_auction_results_permissioned(
-        _view_number: ViewNumber,
+        &self,
+        view_number: ViewNumber,
         _signauture: <SeqTypes as NodeType>::SignatureKey,
-    );
+    ) -> SolverResult<SolverAuctionResults>;
 }
 
 #[async_trait]
@@ -156,6 +160,7 @@ impl UpdateSolverState for GlobalState {
 
         let RollupUpdatebody {
             namespace_id,
+            reserve_url,
             reserve_price,
             active,
             signature_keys,
@@ -182,6 +187,10 @@ impl UpdateSolverState for GlobalState {
 
         let mut registration =
             serde_json::from_value::<RollupRegistration>(result.data).map_err(serde_json_err)?;
+
+        if let Some(reserve_url) = reserve_url {
+            registration.body.reserve_url = reserve_url;
+        }
 
         if let Some(rp) = reserve_price {
             registration.body.reserve_price = rp;
@@ -247,11 +256,46 @@ impl UpdateSolverState for GlobalState {
             .collect::<SolverResult<Vec<RollupRegistration>>>()
     }
 
-    async fn calculate_auction_results_permissionless(_view_number: ViewNumber) {}
+    async fn calculate_auction_results_permissionless(
+        &self,
+        view_number: ViewNumber,
+    ) -> SolverResult<SolverAuctionResults> {
+        // todo (ab): actual logic needs to implemented
+        // for we, we just return some default results
+
+        let rollups = self.get_all_rollup_registrations().await?;
+
+        let results = SolverAuctionResults::new(
+            view_number,
+            Vec::new(),
+            rollups
+                .into_iter()
+                .map(|r| (r.body.namespace_id, r.body.reserve_url))
+                .collect(),
+        );
+
+        Ok(results)
+    }
     async fn calculate_auction_results_permissioned(
-        _view_number: ViewNumber,
+        &self,
+        view_number: ViewNumber,
         _signauture: <SeqTypes as NodeType>::SignatureKey,
-    ) {
+    ) -> SolverResult<SolverAuctionResults> {
+        // todo (ab): actual logic needs to implemented
+        // for we, we just return some default results
+
+        let rollups = self.get_all_rollup_registrations().await?;
+
+        let results = SolverAuctionResults::new(
+            view_number,
+            Vec::new(),
+            rollups
+                .into_iter()
+                .map(|r| (r.body.namespace_id, r.body.reserve_url))
+                .collect(),
+        );
+
+        Ok(results)
     }
 }
 

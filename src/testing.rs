@@ -119,10 +119,13 @@ impl MockSolver {
 #[cfg(test)]
 mod test {
 
+    use std::str::FromStr;
+
     use committable::Committable;
     use espresso_types::SeqTypes;
     use hotshot::types::{BLSPubKey, SignatureKey};
     use hotshot_types::traits::node_implementation::NodeType;
+    use tide_disco::Url;
 
     use crate::{
         testing::MockSolver,
@@ -155,6 +158,7 @@ mod test {
         // Initialize a rollup registration with namespace id = 1
         let reg_ns_1_body = RollupRegistrationBody {
             namespace_id: 1_u64.into(),
+            reserve_url: Url::from_str("http://localhost").unwrap(),
             reserve_price: 200.into(),
             active: true,
             signature_keys,
@@ -237,6 +241,7 @@ mod test {
 
         let update_body = RollupUpdatebody {
             namespace_id: 1_u64.into(),
+            reserve_url: None,
             reserve_price: None,
             active: Some(false),
             signature_keys: None,
@@ -290,6 +295,7 @@ mod test {
 
         let update_body = RollupUpdatebody {
             namespace_id: 1_u64.into(),
+            reserve_url: None,
             reserve_price: None,
             active: Some(false),
             signature_keys: None,
@@ -353,6 +359,7 @@ mod test {
         // Initialize a rollup registration with namespace id = 1
         let reg_ns_1_body = RollupRegistrationBody {
             namespace_id: 1_u64.into(),
+            reserve_url: Url::from_str("http://localhost").unwrap(),
             reserve_price: 200.into(),
             active: true,
             signature_keys: signature_keys.clone(),
@@ -389,6 +396,7 @@ mod test {
         // We update the rollup but the signature key in the body is not from the signature keys list so this should fail
         let update_body = RollupUpdatebody {
             namespace_id: 1_u64.into(),
+            reserve_url: None,
             reserve_price: None,
             active: Some(false),
             signature_keys: Some(signature_keys.clone()),

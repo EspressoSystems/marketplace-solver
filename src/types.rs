@@ -3,6 +3,7 @@ use espresso_types::{FeeAmount, NamespaceId, SeqTypes};
 use hotshot::types::SignatureKey;
 use hotshot_types::traits::node_implementation::NodeType;
 use serde::{Deserialize, Serialize};
+use tide_disco::Url;
 
 #[derive(PartialEq, Serialize, Deserialize, Debug, Clone)]
 pub struct RollupRegistration {
@@ -15,6 +16,7 @@ pub struct RollupRegistration {
 #[derive(PartialEq, Serialize, Deserialize, Debug, Clone)]
 pub struct RollupRegistrationBody {
     pub namespace_id: NamespaceId,
+    pub reserve_url: Url,
     // Denominated in Wei
     pub reserve_price: FeeAmount,
     // whether this registration is active in the marketplace
@@ -41,6 +43,7 @@ impl Committable for RollupRegistrationBody {
 
         let mut comm = committable::RawCommitmentBuilder::new(&Self::tag())
             .u64_field("namespace_id", u64::from(self.namespace_id))
+            .var_size_field("reserve_url", self.reserve_url.as_str().as_ref())
             .fixed_size_field("reserve_price", &bytes)
             .fixed_size_field("active", &active)
             .constant_str("signature_keys");
@@ -69,6 +72,7 @@ pub struct RollupUpdate {
 pub struct RollupUpdatebody {
     pub namespace_id: NamespaceId,
     // Denominated in Wei
+    pub reserve_url: Option<Url>,
     pub reserve_price: Option<FeeAmount>,
     // whether this registration is active in the marketplace
     pub active: Option<bool>,
@@ -90,6 +94,10 @@ impl Committable for RollupUpdatebody {
 
         let mut comm = committable::RawCommitmentBuilder::new(&Self::tag())
             .u64_field("namespace_id", u64::from(self.namespace_id));
+
+        if let Some(reserve_url) = &self.reserve_url {
+            comm = comm.var_size_field("reserve_url", reserve_url.as_str().as_ref())
+        }
 
         if let Some(rp) = self.reserve_price {
             let mut bytes = [0u8; 32];
