@@ -3,7 +3,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use espresso_types::NamespaceId;
+use espresso_types::{
+    v0_3::{RollupRegistration, RollupUpdate},
+    NamespaceId,
+};
 use futures::FutureExt;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -15,10 +18,7 @@ use tide_disco::{
 use toml::{map::Entry, Value};
 use vbs::version::StaticVersionType;
 
-use crate::{
-    state::UpdateSolverState,
-    types::{RollupRegistration, RollupUpdate},
-};
+use crate::state::UpdateSolverState;
 
 #[derive(Debug, Error, Serialize, Deserialize)]
 pub enum SolverError {

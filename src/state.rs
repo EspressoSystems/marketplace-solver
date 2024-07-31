@@ -2,7 +2,13 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use committable::Committable;
-use espresso_types::{v0_3::SolverAuctionResults, PubKey, SeqTypes};
+use espresso_types::{
+    v0_3::{
+        RollupRegistration, RollupRegistrationBody, RollupUpdate, RollupUpdatebody,
+        SolverAuctionResults,
+    },
+    PubKey, SeqTypes,
+};
 use hotshot::types::SignatureKey;
 use hotshot_types::{
     data::ViewNumber, signature_key::BuilderKey, traits::node_implementation::NodeType, PeerConfig,
@@ -11,12 +17,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{FromRow, PgPool};
 
-use crate::{
-    database::PostgresClient,
-    overflow_err, serde_json_err,
-    types::{RollupRegistration, RollupRegistrationBody, RollupUpdate, RollupUpdatebody},
-    SolverError, SolverResult,
-};
+use crate::{database::PostgresClient, overflow_err, serde_json_err, SolverError, SolverResult};
 
 // TODO ED: Implement a shared solver state with the HotShot events received
 pub struct GlobalState {
